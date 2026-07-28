@@ -21,7 +21,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 export const photosApi = {
   getAll: () => request<{ photos: Photo[] }>('/photos'),
   getFeatured: () => request<{ photos: Photo[] }>('/photos/featured'),
-  getByCategory: (category: string) => request<{ photos: Photo[] }>(`/photos/category/${category}`),
+  getByCategory: (category: string) => request<{ photos: Photo[] }>(`/photos?category=${encodeURIComponent(category)}`),
   upload: (formData: FormData) =>
     fetch(`${API_BASE}/photos`, {
       method: 'POST',
