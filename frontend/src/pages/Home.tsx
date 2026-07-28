@@ -3,13 +3,42 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Camera, Music, Sparkles } from 'lucide-react'
 import PhotoGrid from '@/components/PhotoGrid'
+import { photosApi } from '@/lib/api'
 import type { Photo } from '@/types'
 
 const Home = () => {
   const [featuredPhotos, setFeaturedPhotos] = useState<Photo[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // 示例精选照片数据
-  const samplePhotos: Photo[] = [
+  useEffect(() => {
+    fetchFeaturedPhotos()
+  }, [])
+
+  const fetchFeaturedPhotos = async () => {
+    try {
+      setLoading(true)
+      const res = await photosApi.getFeatured()
+      // 转换字段名
+      const formattedPhotos = res.photos.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description || '',
+        imageUrl: p.image_url,
+        category: p.category,
+        isFeatured: p.is_featured,
+        createdAt: p.created_at,
+      }))
+      setFeaturedPhotos(formattedPhotos)
+    } catch (error) {
+      console.error('获取精选照片失败:', error)
+      // 出错时显示示例数据
+      setFeaturedPhotos(getSamplePhotos())
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getSamplePhotos = (): Photo[] => [
     {
       id: 1,
       title: '城市黄昏',
@@ -66,10 +95,6 @@ const Home = () => {
     },
   ]
 
-  useEffect(() => {
-    setFeaturedPhotos(samplePhotos)
-  }, [])
-
   return (
     <div className="pt-16 md:pt-20">
       {/* Hero 区域 */}
@@ -119,7 +144,7 @@ const Home = () => {
 
         {/* 向下滚动提示 */}
         <motion.div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2"
+          className="absolute bottom-10 left/1/2 -translate-x-1/2"
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
@@ -151,7 +176,15 @@ const Home = () => {
             </p>
           </motion.div>
 
-          <PhotoGrid photos={featuredPhotos} layout="bento" />
+          {!loading && featuredPhotos.length > 0 && (
+            <PhotoGrid photos={featuredPhotos} layout="bento" />
+          )}
+
+          {loading && (
+            <div className="text-center py-20">
+              <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+            </div>
+          )}
 
           <motion.div
             initial={{ opacity: 0 }}

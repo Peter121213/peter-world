@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   Music,
@@ -8,45 +8,23 @@ import {
   Pause,
   Plus,
   X,
+  Loader2,
 } from 'lucide-react'
+import { musicApi } from '@/lib/api'
 
 interface Track {
   id: number
   title: string
   artist: string
   audioUrl: string
+  coverUrl?: string
   duration: string
   createdAt: string
 }
 
 const AdminMusic = () => {
-  const [tracks, setTracks] = useState<Track[]>([
-    {
-      id: 1,
-      title: '夏日微风',
-      artist: 'Peter',
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      duration: '3:45',
-      createdAt: '2024-01-15',
-    },
-    {
-      id: 2,
-      title: '星空漫步',
-      artist: 'Peter',
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-      duration: '4:12',
-      createdAt: '2024-01-20',
-    },
-    {
-      id: 3,
-      title: '午后阳光',
-      artist: 'Peter',
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-      duration: '3:58',
-      createdAt: '2024-02-01',
-    },
-  ])
-
+  const [tracks, setTracks] = useState<Track[]>([])
+  const [loading, setLoading] = useState(true)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [uploadForm, setUploadForm] = useState({
     title: '',
@@ -55,48 +33,119 @@ const AdminMusic = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [playingId, setPlayingId] = useState<number | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const handleDelete = (id: number) => {
-    if (confirm('确定要删除这首音乐吗？')) {
-      setTracks((prev) => prev.filter((t) => t.id !== id))
-      if (playingId === id) setPlayingId(null)
+  // 页面加载时获取音乐列表
+  useEffect(() => {
+    fetchTracks()
+  }, [])
+
+  const fetchTracks = async () => {
+    try {
+      setLoading(true)
+      const res = await musicApi.getAll()
+      // 转换字段名
+      const formattedTracks = res.tracks.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        artist: t.artist || 'Peter',
+        audioUrl: t.audio_url,
+        coverUrl: t.cover_url,
+        duration: t.duration || '',
+        createdAt: t.created_at?.split('T')[0] || '',
+      }))
+      setTracks(formattedTracks)
+    } catch (error) {
+      console.error('获取音乐列表失败:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handlePlay = (id: number) => {
-    if (playingId === id) {
+  const handleDelete = async (id: number) => {
+    if (!confirm('确定要删除这首音乐吗？')) return
+
+    try {
+      await musicApi.delete(id)
+      setTracks((prev) => prev.filter((t) => t.id !== id))
+      if (playingId === id) {
+        setPlayingId(null)
+        if (audioRef.current) {
+          audioRef.current.pause()
+          audioRef.current = null
+        }
+      }
+    } catch (error) {
+      console.error('删除音乐失败:', error)
+      alert('删除失败，请重试')
+    }
+  }
+
+  const handlePlay = (track: Track) => {
+    if (playingId === track.id) {
+      // 暂停
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
       setPlayingId(null)
     } else {
-      setPlayingId(id)
+      // 播放新的
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+      const audio = new Audio(track.audioUrl)
+      audio.play()
+      audioRef.current = audio
+      setPlayingId(track.id)
+
+      audio.onended = () => {
+        setPlayingId(null)
+      }
     }
   }
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsUploading(true)
-
-    // 模拟上传
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    const newTrack: Track = {
-      id: Date.now(),
-      title: uploadForm.title,
-      artist: uploadForm.artist,
-      audioUrl: selectedFile
-        ? URL.createObjectURL(selectedFile)
-        : 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
-      duration: '4:00',
-      createdAt: new Date().toISOString().split('T')[0],
+    if (!selectedFile) {
+      alert('请选择要上传的音乐文件')
+      return
     }
 
-    setTracks((prev) => [...prev, newTrack])
-    setIsUploadModalOpen(false)
-    setUploadForm({
-      title: '',
-      artist: 'Peter',
-    })
-    setSelectedFile(null)
-    setIsUploading(false)
+    setIsUploading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('title', uploadForm.title)
+      formData.append('artist', uploadForm.artist)
+      formData.append('audio', selectedFile)
+
+      const res = await musicApi.upload(formData)
+      
+      if (res.track) {
+        const newTrack: Track = {
+          id: res.track.id,
+          title: res.track.title,
+          artist: res.track.artist || 'Peter',
+          audioUrl: res.track.audio_url,
+          coverUrl: res.track.cover_url,
+          duration: res.track.duration || '',
+          createdAt: res.track.created_at?.split('T')[0] || '',
+        }
+        setTracks((prev) => [newTrack, ...prev])
+      }
+
+      setIsUploadModalOpen(false)
+      setUploadForm({
+        title: '',
+        artist: 'Peter',
+      })
+      setSelectedFile(null)
+    } catch (error) {
+      console.error('上传音乐失败:', error)
+      alert('上传失败，请重试')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -119,87 +168,86 @@ const AdminMusic = () => {
       {/* 统计信息 */}
       <div className="flex items-center space-x-4 text-sm text-muted-foreground">
         <span>共 {tracks.length} 首音乐</span>
-        <span>•</span>
-        <span>总时长约 {tracks.length * 4} 分钟</span>
       </div>
 
       {/* 音乐列表 */}
       <div className="bg-card/50 rounded-xl border border-white/10 overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-white/10">
-              <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">
-                #
-              </th>
-              <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">
-                标题
-              </th>
-              <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground hidden sm:table-cell">
-                艺术家
-              </th>
-              <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground hidden md:table-cell">
-                时长
-              </th>
-              <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground hidden lg:table-cell">
-                添加时间
-              </th>
-              <th className="text-right py-4 px-6 text-sm font-medium text-muted-foreground">
-                操作
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {tracks.map((track, index) => (
-              <motion.tr
-                key={track.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                className="border-b border-white/5 hover:bg-white/5 transition-colors"
-              >
-                <td className="py-4 px-6">
-                  <button
-                    onClick={() => handlePlay(track.id)}
-                    className="w-8 h-8 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
-                  >
-                    {playingId === track.id ? (
-                      <Pause className="w-4 h-4" />
-                    ) : (
-                      <Play className="w-4 h-4 ml-0.5" />
-                    )}
-                  </button>
-                </td>
-                <td className="py-4 px-6">
-                  <div className="font-medium">{track.title}</div>
-                  <div className="text-sm text-muted-foreground sm:hidden">
+        {loading ? (
+          <div className="text-center py-20">
+            <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">加载中...</p>
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/10">
+                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">
+                  #
+                </th>
+                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground">
+                  标题
+                </th>
+                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground hidden sm:table-cell">
+                  艺术家
+                </th>
+                <th className="text-left py-4 px-6 text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                  添加时间
+                </th>
+                <th className="text-right py-4 px-6 text-sm font-medium text-muted-foreground">
+                  操作
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {tracks.map((track, index) => (
+                <motion.tr
+                  key={track.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                >
+                  <td className="py-4 px-6">
+                    <button
+                      onClick={() => handlePlay(track)}
+                      className="w-8 h-8 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
+                    >
+                      {playingId === track.id ? (
+                        <Pause className="w-4 h-4" />
+                      ) : (
+                        <Play className="w-4 h-4 ml-0.5" />
+                      )}
+                    </button>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="font-medium">{track.title}</div>
+                    <div className="text-sm text-muted-foreground sm:hidden">
+                      {track.artist}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-muted-foreground hidden sm:table-cell">
                     {track.artist}
-                  </div>
-                </td>
-                <td className="py-4 px-6 text-muted-foreground hidden sm:table-cell">
-                  {track.artist}
-                </td>
-                <td className="py-4 px-6 text-muted-foreground hidden md:table-cell">
-                  {track.duration}
-                </td>
-                <td className="py-4 px-6 text-muted-foreground hidden lg:table-cell">
-                  {track.createdAt}
-                </td>
-                <td className="py-4 px-6 text-right">
-                  <button
-                    onClick={() => handleDelete(track.id)}
-                    className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                    title="删除"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="py-4 px-6 text-muted-foreground hidden lg:table-cell">
+                    {track.createdAt}
+                  </td>
+                  <td className="py-4 px-6 text-right">
+                    <button
+                      onClick={() => handleDelete(track.id)}
+                      className="p-2 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                      title="删除"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
         {/* 空状态 */}
-        {tracks.length === 0 && (
+        {!loading && tracks.length === 0 && (
           <div className="text-center py-20">
             <Music className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground">还没有添加音乐</p>
@@ -219,7 +267,7 @@ const AdminMusic = () => {
         <ul className="text-sm text-muted-foreground space-y-2">
           <li>• 音乐将在网站右下角的播放器中播放</li>
           <li>• 支持 MP3、WAV、OGG 等常见音频格式</li>
-          <li>• 建议单首音乐大小不超过 10MB</li>
+          <li>• 建议单首音乐大小不超过 20MB</li>
           <li>• 音乐播放顺序按添加时间排列</li>
         </ul>
       </div>
@@ -254,7 +302,7 @@ const AdminMusic = () => {
                     {selectedFile ? selectedFile.name : '点击选择或拖拽音频文件到这里'}
                   </span>
                   <span className="text-xs text-muted-foreground/70 mt-1">
-                    支持 MP3、WAV、OGG 格式
+                    支持 MP3、WAV、OGG 格式，最大 20MB
                   </span>
                   <input
                     type="file"
@@ -313,12 +361,12 @@ const AdminMusic = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploading || !uploadForm.title}
+                  disabled={isUploading || !uploadForm.title || !selectedFile}
                   className="flex-1 btn-primary flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isUploading ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>上传中...</span>
                     </>
                   ) : (

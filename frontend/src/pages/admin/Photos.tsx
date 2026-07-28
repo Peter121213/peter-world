@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Image,
@@ -10,7 +10,9 @@ import {
   Plus,
   X,
   Star,
+  Loader2,
 } from 'lucide-react'
+import { photosApi } from '@/lib/api'
 
 interface Photo {
   id: number
@@ -23,45 +25,8 @@ interface Photo {
 }
 
 const AdminPhotos = () => {
-  const [photos, setPhotos] = useState<Photo[]>([
-    {
-      id: 1,
-      title: '城市黄昏',
-      description: '夕阳下的城市天际线',
-      imageUrl: 'https://picsum.photos/seed/admin1/400/300',
-      category: '风景',
-      isFeatured: true,
-      createdAt: '2024-01-15',
-    },
-    {
-      id: 2,
-      title: '人像写真',
-      description: '自然光下的人像摄影',
-      imageUrl: 'https://picsum.photos/seed/admin2/400/300',
-      category: '人像',
-      isFeatured: true,
-      createdAt: '2024-01-20',
-    },
-    {
-      id: 3,
-      title: '街头瞬间',
-      description: '城市街头的真实瞬间',
-      imageUrl: 'https://picsum.photos/seed/admin3/400/300',
-      category: '街拍',
-      isFeatured: false,
-      createdAt: '2024-02-01',
-    },
-    {
-      id: 4,
-      title: '自然风光',
-      description: '山川湖海的壮丽景色',
-      imageUrl: 'https://picsum.photos/seed/admin4/400/300',
-      category: '风景',
-      isFeatured: true,
-      createdAt: '2024-02-10',
-    },
-  ])
-
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('全部')
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
@@ -76,6 +41,33 @@ const AdminPhotos = () => {
 
   const categories = ['全部', '风景', '人像', '街拍', '创意', '生活']
 
+  // 页面加载时获取照片列表
+  useEffect(() => {
+    fetchPhotos()
+  }, [])
+
+  const fetchPhotos = async () => {
+    try {
+      setLoading(true)
+      const res = await photosApi.getAll()
+      // 转换字段名（后端是下划线，前端是驼峰）
+      const formattedPhotos = res.photos.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description || '',
+        imageUrl: p.image_url,
+        category: p.category,
+        isFeatured: p.is_featured,
+        createdAt: p.created_at?.split('T')[0] || '',
+      }))
+      setPhotos(formattedPhotos)
+    } catch (error) {
+      console.error('获取照片列表失败:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const filteredPhotos = photos.filter((photo) => {
     const matchesSearch = photo.title
       .toLowerCase()
@@ -85,49 +77,81 @@ const AdminPhotos = () => {
     return matchesSearch && matchesCategory
   })
 
-  const handleDelete = (id: number) => {
-    if (confirm('确定要删除这张照片吗？')) {
+  const handleDelete = async (id: number) => {
+    if (!confirm('确定要删除这张照片吗？')) return
+
+    try {
+      await photosApi.delete(id)
       setPhotos((prev) => prev.filter((p) => p.id !== id))
+    } catch (error) {
+      console.error('删除照片失败:', error)
+      alert('删除失败，请重试')
     }
   }
 
-  const handleToggleFeatured = (id: number) => {
-    setPhotos((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, isFeatured: !p.isFeatured } : p
+  const handleToggleFeatured = async (id: number) => {
+    const photo = photos.find((p) => p.id === id)
+    if (!photo) return
+
+    try {
+      await photosApi.update(id, { is_featured: !photo.isFeatured } as any)
+      setPhotos((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, isFeatured: !p.isFeatured } : p
+        )
       )
-    )
+    } catch (error) {
+      console.error('更新精选状态失败:', error)
+      alert('操作失败，请重试')
+    }
   }
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsUploading(true)
-
-    // 模拟上传
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    const newPhoto: Photo = {
-      id: Date.now(),
-      title: uploadForm.title,
-      description: uploadForm.description,
-      imageUrl: selectedFile
-        ? URL.createObjectURL(selectedFile)
-        : `https://picsum.photos/seed/${Date.now()}/400/300`,
-      category: uploadForm.category,
-      isFeatured: uploadForm.isFeatured,
-      createdAt: new Date().toISOString().split('T')[0],
+    if (!selectedFile) {
+      alert('请选择要上传的图片')
+      return
     }
 
-    setPhotos((prev) => [newPhoto, ...prev])
-    setIsUploadModalOpen(false)
-    setUploadForm({
-      title: '',
-      description: '',
-      category: '风景',
-      isFeatured: false,
-    })
-    setSelectedFile(null)
-    setIsUploading(false)
+    setIsUploading(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('title', uploadForm.title)
+      formData.append('description', uploadForm.description)
+      formData.append('category', uploadForm.category)
+      formData.append('isFeatured', String(uploadForm.isFeatured))
+      formData.append('image', selectedFile)
+
+      const res = await photosApi.upload(formData)
+      
+      if (res.photo) {
+        const newPhoto: Photo = {
+          id: res.photo.id,
+          title: res.photo.title,
+          description: res.photo.description || '',
+          imageUrl: res.photo.image_url,
+          category: res.photo.category,
+          isFeatured: res.photo.is_featured,
+          createdAt: res.photo.created_at?.split('T')[0] || '',
+        }
+        setPhotos((prev) => [newPhoto, ...prev])
+      }
+
+      setIsUploadModalOpen(false)
+      setUploadForm({
+        title: '',
+        description: '',
+        category: '风景',
+        isFeatured: false,
+      })
+      setSelectedFile(null)
+    } catch (error) {
+      console.error('上传照片失败:', error)
+      alert('上传失败，请重试')
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -182,83 +206,87 @@ const AdminPhotos = () => {
         <span>{photos.filter((p) => p.isFeatured).length} 张精选</span>
       </div>
 
-      {/* 照片网格 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredPhotos.map((photo, index) => (
-          <motion.div
-            key={photo.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-            className="bg-card/50 rounded-xl overflow-hidden border border-white/10 group"
-          >
-            {/* 图片 */}
-            <div className="relative aspect-[4/3] overflow-hidden">
-              <img
-                src={photo.imageUrl}
-                alt={photo.title}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-              {/* 悬浮操作 */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-3">
-                <button
-                  onClick={() => handleToggleFeatured(photo.id)}
-                  className={`p-2 rounded-full transition-colors ${
-                    photo.isFeatured
-                      ? 'bg-yellow-500 text-white'
-                      : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
-                  title={photo.isFeatured ? '取消精选' : '设为精选'}
-                >
-                  <Star
-                    className={`w-5 h-5 ${photo.isFeatured ? 'fill-current' : ''}`}
-                  />
-                </button>
-                <button
-                  className="p-2 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
-                  title="编辑"
-                >
-                  <Edit className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleDelete(photo.id)}
-                  className="p-2 rounded-full bg-red-500/80 text-white hover:bg-red-500 transition-colors"
-                  title="删除"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-              {/* 精选标签 */}
-              {photo.isFeatured && (
-                <div className="absolute top-3 left-3 px-2 py-1 bg-yellow-500 text-white text-xs rounded-full flex items-center space-x-1">
-                  <Star className="w-3 h-3 fill-current" />
-                  <span>精选</span>
-                </div>
-              )}
-            </div>
-            {/* 信息 */}
-            <div className="p-4">
-              <h3 className="font-semibold mb-1 truncate">{photo.title}</h3>
-              <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                {photo.description}
-              </p>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="px-2 py-1 bg-white/5 rounded-full">
-                  {photo.category}
-                </span>
-                <span>{photo.createdAt}</span>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* 空状态 */}
-      {filteredPhotos.length === 0 && (
+      {/* 加载状态 */}
+      {loading ? (
         <div className="text-center py-20">
-          <Image className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-          <p className="text-muted-foreground">没有找到匹配的照片</p>
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">加载中...</p>
         </div>
+      ) : (
+        <>
+          {/* 照片网格 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredPhotos.map((photo, index) => (
+              <motion.div
+                key={photo.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className="bg-card/50 rounded-xl overflow-hidden border border-white/10 group"
+              >
+                {/* 图片 */}
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <img
+                    src={photo.imageUrl}
+                    alt={photo.title}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  {/* 悬浮操作 */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-3">
+                    <button
+                      onClick={() => handleToggleFeatured(photo.id)}
+                      className={`p-2 rounded-full transition-colors ${
+                        photo.isFeatured
+                          ? 'bg-yellow-500 text-white'
+                          : 'bg-white/20 text-white hover:bg-white/30'
+                      }`}
+                      title={photo.isFeatured ? '取消精选' : '设为精选'}
+                    >
+                      <Star
+                        className={`w-5 h-5 ${photo.isFeatured ? 'fill-current' : ''}`}
+                      />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(photo.id)}
+                      className="p-2 rounded-full bg-red-500/80 text-white hover:bg-red-500 transition-colors"
+                      title="删除"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                  {/* 精选标签 */}
+                  {photo.isFeatured && (
+                    <div className="absolute top-3 left-3 px-2 py-1 bg-yellow-500 text-white text-xs rounded-full flex items-center space-x-1">
+                      <Star className="w-3 h-3 fill-current" />
+                      <span>精选</span>
+                    </div>
+                  )}
+                </div>
+                {/* 信息 */}
+                <div className="p-4">
+                  <h3 className="font-semibold mb-1 truncate">{photo.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                    {photo.description}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="px-2 py-1 bg-white/5 rounded-full">
+                      {photo.category}
+                    </span>
+                    <span>{photo.createdAt}</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* 空状态 */}
+          {filteredPhotos.length === 0 && (
+            <div className="text-center py-20">
+              <Image className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">没有找到匹配的照片</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* 上传弹窗 */}
@@ -291,7 +319,7 @@ const AdminPhotos = () => {
                     {selectedFile ? selectedFile.name : '点击选择或拖拽图片到这里'}
                   </span>
                   <span className="text-xs text-muted-foreground/70 mt-1">
-                    支持 JPG、PNG、WebP 格式
+                    支持 JPG、PNG、WebP 格式，最大 10MB
                   </span>
                   <input
                     type="file"
@@ -390,12 +418,12 @@ const AdminPhotos = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploading || !uploadForm.title}
+                  disabled={isUploading || !uploadForm.title || !selectedFile}
                   className="flex-1 btn-primary flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isUploading ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>上传中...</span>
                     </>
                   ) : (

@@ -10,6 +10,7 @@ import {
   VolumeX,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { musicApi } from '@/lib/api'
 import type { MusicTrack } from '@/types'
 
 const MusicPlayer = () => {
@@ -21,6 +22,7 @@ const MusicPlayer = () => {
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(0.7)
   const [isMuted, setIsMuted] = useState(false)
+  const [loading, setLoading] = useState(true)
   const audioRef = useRef<HTMLAudioElement>(null)
 
   // 示例音乐数据
@@ -49,8 +51,36 @@ const MusicPlayer = () => {
   ]
 
   useEffect(() => {
-    setTracks(sampleTracks)
+    fetchTracks()
   }, [])
+
+  const fetchTracks = async () => {
+    try {
+      setLoading(true)
+      const res = await musicApi.getAll()
+      if (res.tracks && res.tracks.length > 0) {
+        // 转换字段名
+        const formattedTracks = res.tracks.map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist || 'Peter',
+          audioUrl: t.audio_url,
+          coverUrl: t.cover_url,
+          duration: t.duration,
+        }))
+        setTracks(formattedTracks)
+      } else {
+        // 没有音乐时显示示例
+        setTracks(sampleTracks)
+      }
+    } catch (error) {
+      console.error('获取音乐列表失败:', error)
+      // 出错时显示示例音乐
+      setTracks(sampleTracks)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     const handleToggleMusic = () => {
