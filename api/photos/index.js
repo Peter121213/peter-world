@@ -30,7 +30,8 @@ export default apiHandler(async (req, res) => {
     const { data: photos, error: dbError } = await query
 
     if (dbError) {
-      return error(res, '获取照片失败')
+      console.error('Supabase Error:', dbError)
+      return error(res, `获取照片失败: ${dbError.message || JSON.stringify(dbError)}`)
     }
 
     return success(res, { photos })
