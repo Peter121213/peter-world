@@ -6,7 +6,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'peter-world-secret-key-2024'
 export function verifyAuth(req) {
   const authHeader = req.headers.authorization || req.headers.Authorization
 
+  console.log('Auth header:', authHeader ? authHeader.substring(0, 20) + '...' : 'none')
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log('No auth header or invalid format')
     return null
   }
 
@@ -14,8 +17,10 @@ export function verifyAuth(req) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
+    console.log('Token verified:', decoded)
     return decoded
   } catch (error) {
+    console.log('Token verify failed:', error.message)
     return null
   }
 }

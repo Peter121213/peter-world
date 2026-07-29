@@ -27,13 +27,23 @@ export default apiHandler(async (req, res) => {
 
   // POST - 上传音乐
   if (req.method === 'POST') {
+    console.log('POST /api/music called')
+    console.log('Content-Type:', req.headers['content-type'])
+    console.log('Content-Length:', req.headers['content-length'])
+    
     requireAuth(req)
+    
+    console.log('Auth passed, parsing form...')
 
     const form = formidable({
       maxFileSize: 20 * 1024 * 1024, // 20MB
     })
 
     const [fields, files] = await form.parse(req)
+    
+    console.log('Form parsed successfully')
+    console.log('Fields:', Object.keys(fields))
+    console.log('Files:', Object.keys(files))
 
     const title = fields.title?.[0]
     const artist = fields.artist?.[0] || 'Peter'
