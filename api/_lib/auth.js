@@ -4,28 +4,27 @@ const JWT_SECRET = process.env.JWT_SECRET || 'peter-world-secret-key-2024'
 
 // 验证 JWT token
 export function verifyAuth(req) {
-  const authHeader = req.headers.authorization || req.headers.Authorization
+  // 从自定义请求头 X-Auth-Token 读取 token（避免 VPN/代理软件替换 Authorization 头）
+  const token = req.headers['x-auth-token'] || req.headers['X-Auth-Token']
 
-  console.log('Auth header exists:', !!authHeader)
-  console.log('Auth header length:', authHeader ? authHeader.length : 0)
+  console.log('X-Auth-Token header exists:', !!token)
+  console.log('Token length:', token ? token.length : 0)
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log('No auth header or invalid format')
+  if (!token) {
+    console.log('No token found in X-Auth-Token header')
     return null
   }
 
-  let token = authHeader.split(' ')[1]
-  
   // 清理 token：去掉所有空白字符（换行、空格等）
-  token = token.replace(/\s/g, '')
+  const cleanToken = token.replace(/\s/g, '')
   
-  console.log('Token length:', token.length)
-  console.log('Token dots count:', (token.match(/\./g) || []).length)
-  console.log('Token start:', token.substring(0, 10))
-  console.log('Token end:', token.substring(token.length - 10))
+  console.log('Clean token length:', cleanToken.length)
+  console.log('Token dots count:', (cleanToken.match(/\./g) || []).length)
+  console.log('Token start:', cleanToken.substring(0, 10))
+  console.log('Token end:', cleanToken.substring(cleanToken.length - 10))
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET)
+    const decoded = jwt.verify(cleanToken, JWT_SECRET)
     console.log('Token verified successfully:', decoded.username)
     return decoded
   } catch (error) {

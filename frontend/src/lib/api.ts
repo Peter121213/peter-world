@@ -27,7 +27,7 @@ export const photosApi = {
       method: 'POST',
       body: formData,
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     })
     
@@ -43,7 +43,7 @@ export const photosApi = {
     request(`/photos/${id}`, {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     }),
   update: (id: number, data: Partial<Photo>) =>
@@ -51,7 +51,7 @@ export const photosApi = {
       method: 'PUT',
       body: JSON.stringify(data),
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     }),
 }
@@ -64,7 +64,7 @@ export const musicApi = {
       method: 'POST',
       body: formData,
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     })
     
@@ -80,7 +80,7 @@ export const musicApi = {
     request(`/music/${id}`, {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     }),
 }
@@ -93,7 +93,7 @@ export const settingsApi = {
       method: 'PUT',
       body: JSON.stringify(data),
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     }),
 }
@@ -108,7 +108,7 @@ export const authApi = {
   verify: () =>
     request<{ valid: boolean }>('/auth/verify', {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     }),
 }
@@ -123,7 +123,7 @@ export const contactApi = {
   getAll: () =>
     request<{ messages: ContactMessage[] }>('/contact/messages', {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     }),
 }
