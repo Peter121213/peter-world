@@ -57,7 +57,7 @@ const AdminSettings = () => {
     try {
       setLoading(true)
       const res = await settingsApi.get()
-      const settings = res.settings
+      const settings: any = res.settings
 
       setGeneralSettings({
         siteName: settings.site_name || 'Peter 的小世界',
