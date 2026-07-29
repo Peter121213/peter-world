@@ -66,69 +66,11 @@ const Home = () => {
       setFeaturedPhotos(formattedPhotos)
     } catch (error) {
       console.error('获取精选照片失败:', error)
-      // 出错时显示示例数据
-      setFeaturedPhotos(getSamplePhotos())
+      setFeaturedPhotos([])
     } finally {
       setLoading(false)
     }
   }
-
-  const getSamplePhotos = (): Photo[] => [
-    {
-      id: 1,
-      title: '城市黄昏',
-      description: '夕阳下的城市天际线',
-      imageUrl: 'https://picsum.photos/seed/photo1/800/600',
-      category: '风景',
-      isFeatured: true,
-      createdAt: '2024-01-15',
-    },
-    {
-      id: 2,
-      title: '人像写真',
-      description: '自然光下的人像摄影',
-      imageUrl: 'https://picsum.photos/seed/photo2/600/800',
-      category: '人像',
-      isFeatured: true,
-      createdAt: '2024-01-20',
-    },
-    {
-      id: 3,
-      title: '街头瞬间',
-      description: '城市街头的真实瞬间',
-      imageUrl: 'https://picsum.photos/seed/photo3/600/600',
-      category: '街拍',
-      isFeatured: true,
-      createdAt: '2024-02-01',
-    },
-    {
-      id: 4,
-      title: '自然风光',
-      description: '山川湖海的壮丽景色',
-      imageUrl: 'https://picsum.photos/seed/photo4/600/600',
-      category: '风景',
-      isFeatured: true,
-      createdAt: '2024-02-10',
-    },
-    {
-      id: 5,
-      title: '创意光影',
-      description: '光影与色彩的实验',
-      imageUrl: 'https://picsum.photos/seed/photo5/800/600',
-      category: '创意',
-      isFeatured: true,
-      createdAt: '2024-02-15',
-    },
-    {
-      id: 6,
-      title: '生活随拍',
-      description: '日常生活中的小美好',
-      imageUrl: 'https://picsum.photos/seed/photo6/600/600',
-      category: '生活',
-      isFeatured: true,
-      createdAt: '2024-02-20',
-    },
-  ]
 
   const heroTitle = (settings?.heroTitle || '用镜头记录美好，\n用音乐传递情感').replace(/\\n/g, '\n')
   const heroSubtitle = (settings?.heroSubtitle || '这里有一些我的生活碎片和喜欢的音乐\n随便坐坐，听听歌，看看照片').replace(/\\n/g, '\n')

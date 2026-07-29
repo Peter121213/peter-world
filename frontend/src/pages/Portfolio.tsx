@@ -36,99 +36,13 @@ const Portfolio = () => {
       setFilteredPhotos(formattedPhotos)
     } catch (error) {
       console.error('获取照片列表失败:', error)
-      // 出错时显示示例数据
-      const samplePhotos = getSamplePhotos()
-      setPhotos(samplePhotos)
-      setFilteredPhotos(samplePhotos)
+      setPhotos([])
+      setFilteredPhotos([])
     } finally {
       setLoading(false)
     }
   }
-
-  const getSamplePhotos = (): Photo[] => [
-    {
-      id: 1,
-      title: '城市黄昏',
-      description: '夕阳下的城市天际线，金色的阳光洒在高楼大厦上',
-      imageUrl: 'https://picsum.photos/seed/port1/800/600',
-      category: '风景',
-      isFeatured: true,
-      createdAt: '2024-01-15',
-    },
-    {
-      id: 2,
-      title: '人像写真',
-      description: '自然光下的人像摄影，捕捉最真实的表情',
-      imageUrl: 'https://picsum.photos/seed/port2/600/800',
-      category: '人像',
-      isFeatured: true,
-      createdAt: '2024-01-20',
-    },
-    {
-      id: 3,
-      title: '街头瞬间',
-      description: '城市街头的真实瞬间，每个人都有自己的故事',
-      imageUrl: 'https://picsum.photos/seed/port3/600/600',
-      category: '街拍',
-      isFeatured: true,
-      createdAt: '2024-02-01',
-    },
-    {
-      id: 4,
-      title: '山川湖海',
-      description: '大自然的壮丽景色，让人心旷神怡',
-      imageUrl: 'https://picsum.photos/seed/port4/800/600',
-      category: '风景',
-      isFeatured: false,
-      createdAt: '2024-02-10',
-    },
-    {
-      id: 5,
-      title: '创意光影',
-      description: '光影与色彩的实验，探索摄影的无限可能',
-      imageUrl: 'https://picsum.photos/seed/port5/600/600',
-      category: '创意',
-      isFeatured: true,
-      createdAt: '2024-02-15',
-    },
-    {
-      id: 6,
-      title: '生活随拍',
-      description: '日常生活中的小美好，值得被记录',
-      imageUrl: 'https://picsum.photos/seed/port6/600/800',
-      category: '生活',
-      isFeatured: false,
       createdAt: '2024-02-20',
-    },
-    {
-      id: 7,
-      title: '晨雾弥漫',
-      description: '清晨的雾气，给世界蒙上一层神秘的面纱',
-      imageUrl: 'https://picsum.photos/seed/port7/800/600',
-      category: '风景',
-      isFeatured: false,
-      createdAt: '2024-03-01',
-    },
-    {
-      id: 8,
-      title: '微笑瞬间',
-      description: '最真挚的笑容，是最好的礼物',
-      imageUrl: 'https://picsum.photos/seed/port8/600/600',
-      category: '人像',
-      isFeatured: false,
-      createdAt: '2024-03-05',
-    },
-    {
-      id: 9,
-      title: '城市夜色',
-      description: '霓虹灯下的城市，有着不一样的魅力',
-      imageUrl: 'https://picsum.photos/seed/port9/800/600',
-      category: '街拍',
-      isFeatured: false,
-      createdAt: '2024-03-10',
-    },
-  ]
-
   useEffect(() => {
     if (activeCategory === '全部') {
       setFilteredPhotos(photos)

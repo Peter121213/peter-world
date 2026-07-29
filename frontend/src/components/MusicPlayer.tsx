@@ -26,31 +26,6 @@ const MusicPlayer = () => {
   const [hasAutoPlayed, setHasAutoPlayed] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  // 示例音乐数据
-  const sampleTracks: MusicTrack[] = [
-    {
-      id: 1,
-      title: '夏日微风',
-      artist: 'Peter',
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      coverUrl: '',
-    },
-    {
-      id: 2,
-      title: '星空漫步',
-      artist: 'Peter',
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-      coverUrl: '',
-    },
-    {
-      id: 3,
-      title: '午后阳光',
-      artist: 'Peter',
-      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-      coverUrl: '',
-    },
-  ]
-
   useEffect(() => {
     fetchTracks()
   }, [])
@@ -71,13 +46,12 @@ const MusicPlayer = () => {
         }))
         setTracks(formattedTracks)
       } else {
-        // 没有音乐时显示示例
-        setTracks(sampleTracks)
+        // 没有音乐
+        setTracks([])
       }
     } catch (error) {
       console.error('获取音乐列表失败:', error)
-      // 出错时显示示例音乐
-      setTracks(sampleTracks)
+      setTracks([])
     } finally {
       setLoading(false)
     }
@@ -173,6 +147,11 @@ const MusicPlayer = () => {
   }
 
   const currentTrack = tracks[currentIndex]
+
+  // 没有音乐时不显示播放器
+  if (!loading && tracks.length === 0) {
+    return null
+  }
 
   return (
     <>
