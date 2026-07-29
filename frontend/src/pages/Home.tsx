@@ -3,16 +3,51 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Camera, Music, Sparkles } from 'lucide-react'
 import PhotoGrid from '@/components/PhotoGrid'
-import { photosApi } from '@/lib/api'
-import type { Photo } from '@/types'
+import { photosApi, settingsApi } from '@/lib/api'
+import type { Photo, SiteSettings } from '@/types'
 
 const Home = () => {
   const [featuredPhotos, setFeaturedPhotos] = useState<Photo[]>([])
+  const [settings, setSettings] = useState<SiteSettings | null>(null)
   const [loading, setLoading] = useState(true)
+  const [settingsLoading, setSettingsLoading] = useState(true)
 
   useEffect(() => {
     fetchFeaturedPhotos()
+    fetchSettings()
   }, [])
+
+  const fetchSettings = async () => {
+    try {
+      setSettingsLoading(true)
+      const res = await settingsApi.get()
+      const s: any = res.settings
+      setSettings({
+        siteName: s.site_name || 'Peter 的小世界',
+        siteDescription: s.site_description || '',
+        heroTitle: s.hero_title || '用镜头记录美好，\n用音乐传递情感',
+        heroSubtitle: s.hero_subtitle || '',
+        heroImage: s.hero_image || 'https://picsum.photos/seed/hero/1920/1080',
+        aboutTitle: s.about_title || '关于我',
+        aboutContent: s.about_content || '',
+        aboutImage: s.about_image || 'https://picsum.photos/seed/about/600/600',
+        aboutPageImage: s.about_page_image || 'https://picsum.photos/seed/aboutme/600/750',
+        musicSectionTitle: s.music_section_title || '音乐陪伴',
+        musicSectionDescription: s.music_section_description || '',
+        socialLinks: {
+          weibo: s.social_weibo || '',
+          instagram: s.social_instagram || '',
+          x: s.social_x || '',
+          github: s.social_github || '',
+          email: s.contact_email || '',
+        },
+      })
+    } catch (error) {
+      console.error('获取设置失败:', error)
+    } finally {
+      setSettingsLoading(false)
+    }
+  }
 
   const fetchFeaturedPhotos = async () => {
     try {
@@ -95,6 +130,15 @@ const Home = () => {
     },
   ]
 
+  const heroTitle = settings?.heroTitle || '用镜头记录美好，\n用音乐传递情感'
+  const heroSubtitle = settings?.heroSubtitle || '这里有一些我的生活碎片和喜欢的音乐\n随便坐坐，听听歌，看看照片'
+  const heroImage = settings?.heroImage || 'https://picsum.photos/seed/hero/1920/1080'
+  const aboutTitle = settings?.aboutTitle || '关于我'
+  const aboutContent = settings?.aboutContent || '你好，我是 Peter，一个热爱摄影和音乐的普通人。'
+  const aboutImage = settings?.aboutImage || 'https://picsum.photos/seed/about/600/600'
+  const musicTitle = settings?.musicSectionTitle || '音乐陪伴'
+  const musicDesc = settings?.musicSectionDescription || '每一张照片都有它的故事，每一首歌都有它的心情。'
+
   return (
     <div className="pt-16 md:pt-20">
       {/* Hero 区域 */}
@@ -102,7 +146,7 @@ const Home = () => {
         {/* 背景图 */}
         <div className="absolute inset-0">
           <img
-            src="https://picsum.photos/seed/hero/1920/1080"
+            src={heroImage}
             alt="Hero Background"
             className="w-full h-full object-cover"
           />
@@ -120,15 +164,11 @@ const Home = () => {
               <Sparkles className="w-6 h-6 text-primary mr-2" />
               <span className="text-primary font-medium">欢迎来到我的小世界</span>
             </div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              用镜头记录美好，
-              <br />
-              <span className="gradient-text">用音乐传递情感</span>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight whitespace-pre-line">
+              {heroTitle}
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-              这里有一些我的生活碎片和喜欢的音乐
-              <br />
-              随便坐坐，听听歌，看看照片
+            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed whitespace-pre-line">
+              {heroSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/portfolio" className="btn-primary flex items-center space-x-2">
@@ -144,7 +184,7 @@ const Home = () => {
 
         {/* 向下滚动提示 */}
         <motion.div
-          className="absolute bottom-10 left/1/2 -translate-x-1/2"
+          className="absolute bottom-10 left-1/2 -translate-x-1/2"
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
@@ -218,11 +258,9 @@ const Home = () => {
                 Music
               </span>
             </div>
-            <h2 className="section-title">音乐陪伴</h2>
-            <p className="section-subtitle max-w-2xl mx-auto">
-              每一张照片都有它的故事，每一首歌都有它的心情。
-              <br />
-              点击右下角的音乐按钮，开启你的听觉之旅。
+            <h2 className="section-title">{musicTitle}</h2>
+            <p className="section-subtitle max-w-2xl mx-auto whitespace-pre-line">
+              {musicDesc}
             </p>
             <button
               onClick={() => {
@@ -251,7 +289,7 @@ const Home = () => {
             >
               <div className="aspect-square rounded-2xl overflow-hidden">
                 <img
-                  src="https://picsum.photos/seed/about/600/600"
+                  src={aboutImage}
                   alt="About Me"
                   className="w-full h-full object-cover"
                 />
@@ -265,15 +303,12 @@ const Home = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="section-title mb-6">关于我</h2>
-              <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-                你好，我是 Peter，一个热爱摄影和音乐的普通人。
-                我喜欢用镜头记录生活中的美好瞬间，也喜欢用音乐表达内心的情感。
-              </p>
-              <p className="text-muted-foreground text-lg leading-relaxed mb-8">
-                这个小世界是我分享作品和心情的地方，
-                希望你能在这里找到一些共鸣和感动。
-              </p>
+              <h2 className="section-title mb-6">{aboutTitle}</h2>
+              <div className="text-muted-foreground text-lg leading-relaxed mb-6 space-y-4">
+                {aboutContent.split('\n').map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
               <Link to="/about" className="btn-primary inline-flex items-center space-x-2">
                 <span>了解更多</span>
                 <ArrowRight className="w-4 h-4" />

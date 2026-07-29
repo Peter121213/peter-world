@@ -5,14 +5,21 @@ import { apiHandler, success, error } from './_lib/response'
 // 默认设置
 const defaultSettings = {
   site_name: "Peter 的小世界",
-  site_description: "记录生活，分享美好",
+  site_description: "用镜头记录美好，用音乐传递情感",
+  hero_title: "用镜头记录美好，\n用音乐传递情感",
+  hero_subtitle: "这里有一些我的生活碎片和喜欢的音乐\n随便坐坐，听听歌，看看照片",
+  hero_image: "https://picsum.photos/seed/hero/1920/1080",
   about_title: "关于我",
-  about_content: "你好，我是 Peter，一个热爱生活的人。",
+  about_content: "你好，我是 Peter，一个热爱摄影和音乐的普通人。\n我喜欢用镜头记录生活中的美好瞬间，也喜欢用音乐表达内心的情感。\n\n这个小世界是我分享作品和心情的地方，\n希望你能在这里找到一些共鸣和感动。",
+  about_image: "https://picsum.photos/seed/about/600/600",
+  about_page_image: "https://picsum.photos/seed/aboutme/600/750",
   contact_email: "2309031942@qq.com",
-  social_instagram: "",
-  social_twitter: "",
-  social_github: "",
   social_weibo: "",
+  social_instagram: "",
+  social_x: "",
+  social_github: "",
+  music_section_title: "音乐陪伴",
+  music_section_description: "每一张照片都有它的故事，每一首歌都有它的心情。\n点击右下角的音乐按钮，开启你的听觉之旅。",
 }
 
 export default apiHandler(async (req, res) => {

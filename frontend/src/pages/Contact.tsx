@@ -1,15 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Mail,
   MessageSquare,
   Send,
   Instagram,
-  Twitter,
   Github,
   MessageCircle,
   CheckCircle,
 } from 'lucide-react'
+import { settingsApi } from '@/lib/api'
+import type { SiteSettings } from '@/types'
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -19,6 +20,33 @@ const Contact = () => {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [socialLinks, setSocialLinks] = useState({
+    weibo: '',
+    instagram: '',
+    x: '',
+    github: '',
+    email: '',
+  })
+
+  useEffect(() => {
+    fetchSocialLinks()
+  }, [])
+
+  const fetchSocialLinks = async () => {
+    try {
+      const res = await settingsApi.get()
+      const s: any = res.settings
+      setSocialLinks({
+        weibo: s.social_weibo || '',
+        instagram: s.social_instagram || '',
+        x: s.social_x || '',
+        github: s.social_github || '',
+        email: s.contact_email || '',
+      })
+    } catch (error) {
+      console.error('获取社交链接失败:', error)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,12 +72,32 @@ const Contact = () => {
     }))
   }
 
-  const socialLinks = [
-    { name: 'Instagram', icon: Instagram, url: '#', color: 'hover:text-pink-500' },
-    { name: 'Twitter', icon: Twitter, url: '#', color: 'hover:text-blue-400' },
-    { name: '微博', icon: MessageCircle, url: '#', color: 'hover:text-red-500' },
-    { name: 'GitHub', icon: Github, url: '#', color: 'hover:text-gray-300' },
-  ]
+  // X (Twitter) 图标
+  const XIcon = () => (
+    <svg
+      viewBox="0 0 24 24"
+      className="w-5 h-5"
+      fill="currentColor"
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+
+  // 微博图标
+  const WeiboIcon = () => (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M10.098 20.323c-3.977.391-7.414-1.406-7.672-4.02-.259-2.609 2.759-5.047 6.74-5.441 3.979-.394 7.413 1.404 7.671 4.018.259 2.6-2.759 5.049-6.739 5.443zM9.05 17.219c-.384.616-1.208.884-1.829.602-.612-.279-.793-.991-.406-1.593.379-.595 1.176-.861 1.793-.601.622.263.82.972.442 1.592zm1.27-1.627c-.141.237-.449.353-.689.253-.236-.09-.313-.361-.177-.586.138-.227.436-.346.672-.24.239.09.315.36.194.573zm.176-2.719c-1.893-.493-4.033.45-4.857 2.118-.836 1.704-.026 3.591 1.886 4.21 1.983.64 4.318-.341 5.132-2.179.8-1.793-.201-3.642-2.161-4.149zm7.563-1.224c-.346-.105-.57-.18-.405-.649.359-1.017.389-1.891.003-2.521-.722-1.177-2.69-1.112-4.986-.033 0 0-.712.309-.529-.254.354-1.147.288-2.112-.274-2.643-1.264-1.186-4.372.043-6.942 2.742C2.903 10.935 1.5 13.546 1.5 15.83c0 4.29 5.109 6.866 10.142 6.866 6.529 0 10.822-3.878 10.822-6.948 0-1.852-1.563-2.9-3.405-3.405-.654-.181-1.313-.284-1.97-.353z"/>
+    </svg>
+  )
+
+  const socialList = [
+    { name: 'Instagram', icon: Instagram, url: socialLinks.instagram, color: 'hover:text-pink-500', show: !!socialLinks.instagram },
+    { name: 'X', icon: XIcon, url: socialLinks.x, color: 'hover:text-blue-400', show: !!socialLinks.x },
+    { name: '微博', icon: WeiboIcon, url: socialLinks.weibo, color: 'hover:text-red-500', show: !!socialLinks.weibo },
+    { name: 'GitHub', icon: Github, url: socialLinks.github, color: 'hover:text-gray-300', show: !!socialLinks.github },
+  ].filter(item => item.show)
+
+  const contactEmail = socialLinks.email || 'hello@peter.world'
 
   return (
     <div className="pt-24 md:pt-28 pb-20 px-4">
@@ -88,7 +136,7 @@ const Contact = () => {
               <h3 className="text-xl font-semibold mb-6">联系方式</h3>
               <div className="space-y-4">
                 <a
-                  href="mailto:hello@peter.world"
+                  href={`mailto:${contactEmail}`}
                   className="flex items-center space-x-4 p-4 bg-card/50 rounded-xl border border-white/10 hover:border-primary/50 transition-colors group"
                 >
                   <div className="p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
@@ -96,27 +144,31 @@ const Contact = () => {
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground">邮箱</div>
-                    <div className="font-medium">hello@peter.world</div>
+                    <div className="font-medium">{contactEmail}</div>
                   </div>
                 </a>
               </div>
             </div>
 
-            <div>
-              <h3 className="text-xl font-semibold mb-6">社交媒体</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {socialLinks.map((social) => (
-                  <a
-                    key={social.name}
-                    href={social.url}
-                    className={`flex items-center justify-center space-x-2 p-4 bg-card/50 rounded-xl border border-white/10 hover:border-primary/50 transition-all ${social.color}`}
-                  >
-                    <social.icon className="w-5 h-5" />
-                    <span className="text-sm">{social.name}</span>
-                  </a>
-                ))}
+            {socialList.length > 0 && (
+              <div>
+                <h3 className="text-xl font-semibold mb-6">社交媒体</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {socialList.map((social) => (
+                    <a
+                      key={social.name}
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center justify-center space-x-2 p-4 bg-card/50 rounded-xl border border-white/10 hover:border-primary/50 transition-all ${social.color}`}
+                    >
+                      <social.icon className="w-5 h-5" />
+                      <span className="text-sm">{social.name}</span>
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
               <h4 className="font-semibold mb-2">💡 小提示</h4>

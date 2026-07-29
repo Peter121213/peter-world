@@ -23,6 +23,7 @@ const MusicPlayer = () => {
   const [volume, setVolume] = useState(0.7)
   const [isMuted, setIsMuted] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [hasAutoPlayed, setHasAutoPlayed] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
 
   // 示例音乐数据
@@ -81,6 +82,26 @@ const MusicPlayer = () => {
       setLoading(false)
     }
   }
+
+  // 音乐列表加载完成后自动播放第一首
+  useEffect(() => {
+    if (!loading && tracks.length > 0 && !hasAutoPlayed && audioRef.current) {
+      setHasAutoPlayed(true)
+      // 尝试自动播放（浏览器可能会阻止有声音的自动播放）
+      const playPromise = audioRef.current.play()
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true)
+          })
+          .catch((error) => {
+            console.log('自动播放被浏览器阻止，需要用户手动点击播放', error)
+            // 自动播放失败，保持暂停状态
+            setIsPlaying(false)
+          })
+      }
+    }
+  }, [loading, tracks, hasAutoPlayed])
 
   useEffect(() => {
     const handleToggleMusic = () => {
@@ -176,7 +197,7 @@ const MusicPlayer = () => {
             : 'translate-y-full opacity-0 pointer-events-none'
         )}
       >
-        <audio ref={audioRef} src={currentTrack?.audioUrl} preload="metadata" />
+        <audio ref={audioRef} src={currentTrack?.audioUrl} preload="auto" />
 
         {/* 关闭按钮 */}
         <button

@@ -7,6 +7,8 @@ import {
   Lock,
   Globe,
   Link,
+  Image,
+  Music,
   Loader2,
 } from 'lucide-react'
 import { settingsApi } from '@/lib/api'
@@ -22,16 +24,29 @@ const AdminSettings = () => {
     siteDescription: '用镜头记录美好，用音乐传递情感',
   })
 
+  const [heroSettings, setHeroSettings] = useState({
+    heroTitle: '',
+    heroSubtitle: '',
+    heroImage: '',
+  })
+
   const [profileSettings, setProfileSettings] = useState({
     aboutTitle: '关于我',
     aboutContent: '',
+    aboutImage: '',
+    aboutPageImage: '',
     email: '',
+  })
+
+  const [musicSettings, setMusicSettings] = useState({
+    musicSectionTitle: '音乐陪伴',
+    musicSectionDescription: '',
   })
 
   const [socialSettings, setSocialSettings] = useState({
     weibo: '',
     instagram: '',
-    twitter: '',
+    x: '',
     github: '',
   })
 
@@ -43,7 +58,9 @@ const AdminSettings = () => {
 
   const tabs = [
     { id: 'general', label: '基本设置', icon: Globe },
+    { id: 'hero', label: '首页 Hero', icon: Image },
     { id: 'profile', label: '个人资料', icon: User },
+    { id: 'music', label: '音乐区域', icon: Music },
     { id: 'social', label: '社交链接', icon: Link },
     { id: 'password', label: '修改密码', icon: Lock },
   ]
@@ -64,16 +81,29 @@ const AdminSettings = () => {
         siteDescription: settings.site_description || '',
       })
 
+      setHeroSettings({
+        heroTitle: settings.hero_title || '',
+        heroSubtitle: settings.hero_subtitle || '',
+        heroImage: settings.hero_image || '',
+      })
+
       setProfileSettings({
         aboutTitle: settings.about_title || '关于我',
         aboutContent: settings.about_content || '',
+        aboutImage: settings.about_image || '',
+        aboutPageImage: settings.about_page_image || '',
         email: settings.contact_email || '',
+      })
+
+      setMusicSettings({
+        musicSectionTitle: settings.music_section_title || '音乐陪伴',
+        musicSectionDescription: settings.music_section_description || '',
       })
 
       setSocialSettings({
         weibo: settings.social_weibo || '',
         instagram: settings.social_instagram || '',
-        twitter: settings.social_twitter || '',
+        x: settings.social_x || '',
         github: settings.social_github || '',
       })
     } catch (error) {
@@ -96,17 +126,30 @@ const AdminSettings = () => {
           site_name: generalSettings.siteName,
           site_description: generalSettings.siteDescription,
         }
+      } else if (activeTab === 'hero') {
+        settingsToSave = {
+          hero_title: heroSettings.heroTitle,
+          hero_subtitle: heroSettings.heroSubtitle,
+          hero_image: heroSettings.heroImage,
+        }
       } else if (activeTab === 'profile') {
         settingsToSave = {
           about_title: profileSettings.aboutTitle,
           about_content: profileSettings.aboutContent,
+          about_image: profileSettings.aboutImage,
+          about_page_image: profileSettings.aboutPageImage,
           contact_email: profileSettings.email,
+        }
+      } else if (activeTab === 'music') {
+        settingsToSave = {
+          music_section_title: musicSettings.musicSectionTitle,
+          music_section_description: musicSettings.musicSectionDescription,
         }
       } else if (activeTab === 'social') {
         settingsToSave = {
           social_weibo: socialSettings.weibo,
           social_instagram: socialSettings.instagram,
-          social_twitter: socialSettings.twitter,
+          social_x: socialSettings.x,
           social_github: socialSettings.github,
         }
       } else if (activeTab === 'password') {
@@ -177,6 +220,64 @@ const AdminSettings = () => {
           </div>
         )
 
+      case 'hero':
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Hero 标题（用 \n 换行）
+              </label>
+              <textarea
+                value={heroSettings.heroTitle}
+                onChange={(e) =>
+                  setHeroSettings((prev) => ({
+                    ...prev,
+                    heroTitle: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Hero 副标题（用 \n 换行）
+              </label>
+              <textarea
+                value={heroSettings.heroSubtitle}
+                onChange={(e) =>
+                  setHeroSettings((prev) => ({
+                    ...prev,
+                    heroSubtitle: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Hero 背景图片 URL
+              </label>
+              <input
+                type="url"
+                value={heroSettings.heroImage}
+                onChange={(e) =>
+                  setHeroSettings((prev) => ({
+                    ...prev,
+                    heroImage: e.target.value,
+                  }))
+                }
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                可以先在"照片管理"上传图片，然后复制图片链接粘贴到这里
+              </p>
+            </div>
+          </div>
+        )
+
       case 'profile':
         return (
           <div className="space-y-6">
@@ -198,7 +299,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                个人简介
+                个人简介（用换行分段）
               </label>
               <textarea
                 value={profileSettings.aboutContent}
@@ -208,9 +309,46 @@ const AdminSettings = () => {
                     aboutContent: e.target.value,
                   }))
                 }
-                rows={5}
+                rows={8}
                 className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-none"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                首页关于我图片 URL
+              </label>
+              <input
+                type="url"
+                value={profileSettings.aboutImage}
+                onChange={(e) =>
+                  setProfileSettings((prev) => ({
+                    ...prev,
+                    aboutImage: e.target.value,
+                  }))
+                }
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                关于我页面头像 URL
+              </label>
+              <input
+                type="url"
+                value={profileSettings.aboutPageImage}
+                onChange={(e) =>
+                  setProfileSettings((prev) => ({
+                    ...prev,
+                    aboutPageImage: e.target.value,
+                  }))
+                }
+                placeholder="https://example.com/avatar.jpg"
+                className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                可以先在"照片管理"上传图片，然后复制图片链接粘贴到这里
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">联系邮箱</label>
@@ -224,6 +362,44 @@ const AdminSettings = () => {
                   }))
                 }
                 className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+          </div>
+        )
+
+      case 'music':
+        return (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                音乐区域标题
+              </label>
+              <input
+                type="text"
+                value={musicSettings.musicSectionTitle}
+                onChange={(e) =>
+                  setMusicSettings((prev) => ({
+                    ...prev,
+                    musicSectionTitle: e.target.value,
+                  }))
+                }
+                className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                音乐区域描述（用 \n 换行）
+              </label>
+              <textarea
+                value={musicSettings.musicSectionDescription}
+                onChange={(e) =>
+                  setMusicSettings((prev) => ({
+                    ...prev,
+                    musicSectionDescription: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-none"
               />
             </div>
           </div>
@@ -263,17 +439,17 @@ const AdminSettings = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Twitter</label>
+              <label className="block text-sm font-medium mb-2">X (Twitter)</label>
               <input
                 type="url"
-                value={socialSettings.twitter}
+                value={socialSettings.x}
                 onChange={(e) =>
                   setSocialSettings((prev) => ({
                     ...prev,
-                    twitter: e.target.value,
+                    x: e.target.value,
                   }))
                 }
-                placeholder="https://twitter.com/yourname"
+                placeholder="https://x.com/yourname"
                 className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
               />
             </div>

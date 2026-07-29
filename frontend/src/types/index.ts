@@ -26,10 +26,13 @@ export interface SiteSettings {
   aboutTitle: string
   aboutContent: string
   aboutImage: string
+  aboutPageImage: string
+  musicSectionTitle: string
+  musicSectionDescription: string
   socialLinks: {
     weibo?: string
     instagram?: string
-    twitter?: string
+    x?: string
     github?: string
     email?: string
   }

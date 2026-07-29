@@ -1,8 +1,50 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { User, Camera, Music, MapPin, Calendar, Heart, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { settingsApi } from '@/lib/api'
+import type { SiteSettings } from '@/types'
 
 const About = () => {
+  const [settings, setSettings] = useState<SiteSettings | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true)
+      const res = await settingsApi.get()
+      const s: any = res.settings
+      setSettings({
+        siteName: s.site_name || 'Peter 的小世界',
+        siteDescription: s.site_description || '',
+        heroTitle: s.hero_title || '',
+        heroSubtitle: s.hero_subtitle || '',
+        heroImage: s.hero_image || '',
+        aboutTitle: s.about_title || '关于我',
+        aboutContent: s.about_content || '',
+        aboutImage: s.about_image || '',
+        aboutPageImage: s.about_page_image || 'https://picsum.photos/seed/aboutme/600/750',
+        musicSectionTitle: s.music_section_title || '',
+        musicSectionDescription: s.music_section_description || '',
+        socialLinks: {
+          weibo: s.social_weibo || '',
+          instagram: s.social_instagram || '',
+          x: s.social_x || '',
+          github: s.social_github || '',
+          email: s.contact_email || '',
+        },
+      })
+    } catch (error) {
+      console.error('获取设置失败:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const skills = [
     { name: '人像摄影', level: 90 },
     { name: '风景摄影', level: 85 },
@@ -47,6 +89,20 @@ const About = () => {
     'Photoshop',
   ]
 
+  const aboutTitle = settings?.aboutTitle || '关于我'
+  const aboutContent = settings?.aboutContent || '你好，我是 Peter，一个热爱摄影和音乐的普通人。'
+  const aboutPageImage = settings?.aboutPageImage || 'https://picsum.photos/seed/aboutme/600/750'
+
+  if (loading) {
+    return (
+      <div className="pt-24 md:pt-28 pb-20 px-4">
+        <div className="text-center py-20">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="pt-24 md:pt-28 pb-20 px-4">
       <div className="max-w-6xl mx-auto">
@@ -63,7 +119,7 @@ const About = () => {
               About Me
             </span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">关于我</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">{aboutTitle}</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             一个热爱摄影和音乐的普通人，
             <br />
@@ -82,7 +138,7 @@ const About = () => {
           >
             <div className="aspect-[4/5] rounded-2xl overflow-hidden">
               <img
-                src="https://picsum.photos/seed/aboutme/600/750"
+                src={aboutPageImage}
                 alt="Peter"
                 className="w-full h-full object-cover"
               />
@@ -99,24 +155,9 @@ const About = () => {
           >
             <h2 className="text-3xl font-bold mb-6">你好，我是 Peter 👋</h2>
             <div className="space-y-4 text-muted-foreground text-lg leading-relaxed">
-              <p>
-                一个热爱摄影和音乐的普通人。我相信每一张照片都有它的故事，
-                每一首歌都有它的心情。
-              </p>
-              <p>
-                从 2020 年开始接触摄影，从最初的随手拍到后来的认真学习，
-                摄影已经成为我生活中不可或缺的一部分。它让我学会了观察，
-                学会了发现生活中的美好。
-              </p>
-              <p>
-                除了摄影，我也很喜欢音乐。音乐是另一种语言，
-                它能表达文字无法描述的情感。在拍照的时候，
-                我也常常会听着音乐，让旋律引导我的镜头。
-              </p>
-              <p>
-                这个小世界是我分享作品和心情的地方，
-                希望你能在这里找到一些共鸣和感动。
-              </p>
+              {aboutContent.split('\n').map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
             </div>
 
             <div className="flex flex-wrap gap-6 mt-8">

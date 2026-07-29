@@ -1,109 +1,79 @@
--- ============================================
--- Peter 的小世界 - 数据库表结构
--- 在 Supabase SQL Editor 中执行此脚本
--- ============================================
+-- 启用 UUID 扩展
+create extension if not exists "uuid-ossp";
 
--- 启用 UUID 扩展（如果需要）
--- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- ============================================
--- 1. 用户表
--- ============================================
-CREATE TABLE IF NOT EXISTS users (
-  id BIGSERIAL PRIMARY KEY,
-  username TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- 1. 用户表（管理员）
+create table if not exists users (
+  id uuid primary key default uuid_generate_v4(),
+  username text unique not null,
+  password_hash text not null,
+  created_at timestamp with time zone default now()
 );
 
--- ============================================
 -- 2. 照片表
--- ============================================
-CREATE TABLE IF NOT EXISTS photos (
-  id BIGSERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT DEFAULT '',
-  image_url TEXT NOT NULL,
-  category TEXT DEFAULT '风景',
-  is_featured BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists photos (
+  id uuid primary key default uuid_generate_v4(),
+  title text not null,
+  description text default '',
+  image_url text not null,
+  category text default '风景',
+  is_featured boolean default false,
+  created_at timestamp with time zone default now()
 );
 
--- ============================================
 -- 3. 音乐表
--- ============================================
-CREATE TABLE IF NOT EXISTS music_tracks (
-  id BIGSERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  artist TEXT DEFAULT 'Peter',
-  audio_url TEXT NOT NULL,
-  cover_url TEXT,
-  duration TEXT DEFAULT '',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists music_tracks (
+  id uuid primary key default uuid_generate_v4(),
+  title text not null,
+  artist text default '',
+  audio_url text not null,
+  cover_url text,
+  duration integer default 0,
+  created_at timestamp with time zone default now()
 );
 
--- ============================================
--- 4. 网站设置表
--- ============================================
-CREATE TABLE IF NOT EXISTS site_settings (
-  key TEXT PRIMARY KEY,
-  value TEXT
+-- 4. 网站设置表（key-value 结构）
+create table if not exists site_settings (
+  id uuid primary key default uuid_generate_v4(),
+  key text unique not null,
+  value text default '',
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
 );
 
--- ============================================
 -- 5. 联系留言表
--- ============================================
-CREATE TABLE IF NOT EXISTS contact_messages (
-  id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  message TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table if not exists contact_messages (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  email text not null,
+  message text not null,
+  created_at timestamp with time zone default now()
 );
 
--- ============================================
--- 初始化默认管理员账号
--- 默认用户名：admin
--- 默认密码：admin123
--- （bcrypt 加密后的哈希值）
--- ============================================
-INSERT INTO users (username, password_hash)
-VALUES (
+-- 插入默认管理员账号（admin / admin123）
+-- 密码 admin123 的 bcrypt 哈希值
+insert into users (username, password_hash)
+values (
   'admin',
   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
 )
-ON CONFLICT (username) DO NOTHING;
+on conflict (username) do nothing;
 
--- ============================================
--- 初始化默认网站设置
--- ============================================
-INSERT INTO site_settings (key, value) VALUES
+-- 插入默认网站设置
+insert into site_settings (key, value) values
   ('site_name', 'Peter 的小世界'),
-  ('site_description', '记录生活，分享美好'),
+  ('site_description', '用镜头记录美好，用音乐传递情感'),
+  ('hero_title', '用镜头记录美好，\n用音乐传递情感'),
+  ('hero_subtitle', '这里有一些我的生活碎片和喜欢的音乐\n随便坐坐，听听歌，看看照片'),
+  ('hero_image', 'https://picsum.photos/seed/hero/1920/1080'),
   ('about_title', '关于我'),
-  ('about_content', '你好，我是 Peter，一个热爱生活的人。这里记录着我的点滴日常。'),
+  ('about_content', '你好，我是 Peter，一个热爱摄影和音乐的普通人。\n我喜欢用镜头记录生活中的美好瞬间，也喜欢用音乐表达内心的情感。\n\n这个小世界是我分享作品和心情的地方，\n希望你能在这里找到一些共鸣和感动。'),
+  ('about_image', 'https://picsum.photos/seed/about/600/600'),
+  ('about_page_image', 'https://picsum.photos/seed/aboutme/600/750'),
   ('contact_email', '2309031942@qq.com'),
+  ('social_weibo', ''),
   ('social_instagram', ''),
-  ('social_twitter', ''),
+  ('social_x', ''),
   ('social_github', ''),
-  ('social_weibo', '')
-ON CONFLICT (key) DO NOTHING;
-
--- ============================================
--- 创建一些示例数据（可选，取消注释即可使用）
--- ============================================
-
--- 示例照片
--- INSERT INTO photos (title, description, image_url, category, is_featured) VALUES
---   ('示例照片 1', '这是一张示例照片', 'https://picsum.photos/seed/photo1/800/600', '风景', true),
---   ('示例照片 2', '这是一张示例照片', 'https://picsum.photos/seed/photo2/800/600', '人像', true),
---   ('示例照片 3', '这是一张示例照片', 'https://picsum.photos/seed/photo3/800/600', '街拍', false);
-
--- 示例音乐
--- INSERT INTO music_tracks (title, artist, audio_url, duration) VALUES
---   ('示例音乐 1', 'Peter', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', '3:45'),
---   ('示例音乐 2', 'Peter', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', '4:20');
-
--- ============================================
--- 完成！
--- ============================================
+  ('music_section_title', '音乐陪伴'),
+  ('music_section_description', '每一张照片都有它的故事，每一首歌都有它的心情。\n点击右下角的音乐按钮，开启你的听觉之旅。')
+on conflict (key) do nothing;
