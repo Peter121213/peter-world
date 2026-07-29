@@ -47,7 +47,7 @@ export default apiHandler(async (req, res) => {
 
     const title = fields.title?.[0]
     const artist = fields.artist?.[0] || 'Peter'
-    const duration = fields.duration?.[0] || ''
+    const duration = parseInt(fields.duration?.[0]) || 0
 
     if (!title) {
       return error(res, '请提供音乐标题', 400)
