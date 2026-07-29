@@ -90,7 +90,7 @@ const About = () => {
   ]
 
   const aboutTitle = settings?.aboutTitle || '关于我'
-  const aboutContent = settings?.aboutContent || '你好，我是 Peter，一个热爱摄影和音乐的普通人。'
+  const aboutContent = (settings?.aboutContent || '你好，我是 Peter，一个热爱摄影和音乐的普通人。').replace(/\\n/g, '\n')
   const aboutPageImage = settings?.aboutPageImage || 'https://picsum.photos/seed/aboutme/600/750'
 
   if (loading) {

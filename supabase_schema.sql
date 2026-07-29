@@ -54,7 +54,7 @@ create table if not exists contact_messages (
 insert into users (username, password_hash)
 values (
   'admin',
-  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
+  '$2a$10$IKAXlyyG07ddz7YmfU0SJOEjbW/8LLwAXNyXtbZal2qBV8lEgxRs.'
 )
 on conflict (username) do nothing;
 

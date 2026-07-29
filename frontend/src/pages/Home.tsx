@@ -130,14 +130,14 @@ const Home = () => {
     },
   ]
 
-  const heroTitle = settings?.heroTitle || '用镜头记录美好，\n用音乐传递情感'
-  const heroSubtitle = settings?.heroSubtitle || '这里有一些我的生活碎片和喜欢的音乐\n随便坐坐，听听歌，看看照片'
+  const heroTitle = (settings?.heroTitle || '用镜头记录美好，\n用音乐传递情感').replace(/\\n/g, '\n')
+  const heroSubtitle = (settings?.heroSubtitle || '这里有一些我的生活碎片和喜欢的音乐\n随便坐坐，听听歌，看看照片').replace(/\\n/g, '\n')
   const heroImage = settings?.heroImage || 'https://picsum.photos/seed/hero/1920/1080'
   const aboutTitle = settings?.aboutTitle || '关于我'
-  const aboutContent = settings?.aboutContent || '你好，我是 Peter，一个热爱摄影和音乐的普通人。'
+  const aboutContent = (settings?.aboutContent || '你好，我是 Peter，一个热爱摄影和音乐的普通人。').replace(/\\n/g, '\n')
   const aboutImage = settings?.aboutImage || 'https://picsum.photos/seed/about/600/600'
   const musicTitle = settings?.musicSectionTitle || '音乐陪伴'
-  const musicDesc = settings?.musicSectionDescription || '每一张照片都有它的故事，每一首歌都有它的心情。'
+  const musicDesc = (settings?.musicSectionDescription || '每一张照片都有它的故事，每一首歌都有它的心情。').replace(/\\n/g, '\n')
 
   return (
     <div className="pt-16 md:pt-20">
