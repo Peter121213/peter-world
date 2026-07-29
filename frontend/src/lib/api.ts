@@ -22,14 +22,23 @@ export const photosApi = {
   getAll: () => request<{ photos: Photo[] }>('/photos'),
   getFeatured: () => request<{ photos: Photo[] }>('/photos/featured'),
   getByCategory: (category: string) => request<{ photos: Photo[] }>(`/photos?category=${encodeURIComponent(category)}`),
-  upload: (formData: FormData) =>
-    fetch(`${API_BASE}/photos`, {
+  upload: async (formData: FormData) => {
+    const res = await fetch(`${API_BASE}/photos`, {
       method: 'POST',
       body: formData,
       headers: {
         Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
       },
-    }).then((res) => res.json()),
+    })
+    
+    const data = await res.json()
+    
+    if (!res.ok) {
+      throw new Error(data.error || '上传失败')
+    }
+    
+    return data
+  },
   delete: (id: number) =>
     request(`/photos/${id}`, {
       method: 'DELETE',
@@ -50,14 +59,23 @@ export const photosApi = {
 // 音乐相关 API
 export const musicApi = {
   getAll: () => request<{ tracks: MusicTrack[] }>('/music'),
-  upload: (formData: FormData) =>
-    fetch(`${API_BASE}/music`, {
+  upload: async (formData: FormData) => {
+    const res = await fetch(`${API_BASE}/music`, {
       method: 'POST',
       body: formData,
       headers: {
         Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
       },
-    }).then((res) => res.json()),
+    })
+    
+    const data = await res.json()
+    
+    if (!res.ok) {
+      throw new Error(data.error || '上传失败')
+    }
+    
+    return data
+  },
   delete: (id: number) =>
     request(`/music/${id}`, {
       method: 'DELETE',
