@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { authApi } from '@/lib/api'
 
 const AdminLogin = () => {
   const [username, setUsername] = useState('')
@@ -19,18 +20,27 @@ const AdminLogin = () => {
     setIsLoading(true)
     setError('')
 
-    // 模拟登录验证
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // 默认管理员账号（实际项目中应该从后端验证）
-    if (username === 'admin' && password === 'admin123') {
-      localStorage.setItem('admin_token', 'mock-jwt-token-' + Date.now())
-      navigate(from, { replace: true })
-    } else {
-      setError('用户名或密码错误')
+    try {
+      const res = await authApi.login(username, password)
+      
+      if (res.token) {
+        // 同时存在 localStorage 和 cookie 里
+        localStorage.setItem('admin_token', res.token)
+        
+        // 设置 cookie（7 天过期）
+        const days = 7
+        const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString()
+        document.cookie = `peter_world_token=${res.token}; expires=${expires}; path=/; SameSite=Lax`
+        
+        navigate(from, { replace: true })
+      } else {
+        setError('登录失败，请重试')
+      }
+    } catch (err: any) {
+      setError(err.message || '用户名或密码错误')
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (

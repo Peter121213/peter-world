@@ -4,14 +4,30 @@ const JWT_SECRET = process.env.JWT_SECRET || 'peter-world-secret-key-2024'
 
 // 验证 JWT token
 export function verifyAuth(req) {
-  // 从自定义请求头 X-Auth-Token 读取 token（避免 VPN/代理软件替换 Authorization 头）
-  const token = req.headers['x-auth-token'] || req.headers['X-Auth-Token']
+  // 从 cookie 读取 token（避免 VPN/代理软件替换请求头）
+  let token = null
+  
+  // 先尝试从 cookie 读取
+  if (req.headers.cookie) {
+    const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=')
+      acc[key] = value
+      return acc
+    }, {})
+    token = cookies.peter_world_token
+  }
+  
+  // 如果 cookie 里没有，再尝试从 X-Auth-Token 头读取（兼容旧版本）
+  if (!token) {
+    token = req.headers['x-auth-token'] || req.headers['X-Auth-Token']
+  }
 
-  console.log('X-Auth-Token header exists:', !!token)
+  console.log('Token source:', req.headers.cookie ? 'cookie' : 'header')
+  console.log('Token exists:', !!token)
   console.log('Token length:', token ? token.length : 0)
 
   if (!token) {
-    console.log('No token found in X-Auth-Token header')
+    console.log('No token found')
     return null
   }
 
