@@ -42,7 +42,7 @@ const Portfolio = () => {
       setLoading(false)
     }
   }
-      createdAt: '2024-02-20',
+
   useEffect(() => {
     if (activeCategory === '全部') {
       setFilteredPhotos(photos)
