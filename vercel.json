@@ -5,6 +5,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/auth/verify",
+      "destination": "/api/auth/login"
+    },
+    {
       "source": "/api/files/:file*",
       "destination": "/api/files/proxy"
     },

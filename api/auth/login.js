@@ -1,9 +1,27 @@
 import bcrypt from 'bcryptjs'
 import { supabase } from '../_lib/supabase'
-import { generateToken } from '../_lib/auth'
+import { generateToken, verifyAuth } from '../_lib/auth'
 import { apiHandler, success, error } from '../_lib/response'
 
 export default apiHandler(async (req, res) => {
+  // GET - 验证 token
+  if (req.method === 'GET') {
+    const user = verifyAuth(req)
+
+    if (!user) {
+      return error(res, '无效的 token', 401)
+    }
+
+    return success(res, {
+      valid: true,
+      user: {
+        id: user.userId,
+        username: user.username,
+      },
+    })
+  }
+
+  // POST - 登录
   if (req.method !== 'POST') {
     return error(res, '方法不允许', 405)
   }
