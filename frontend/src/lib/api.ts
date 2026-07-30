@@ -1,4 +1,4 @@
-// 从环境变量获取 API 地址，开发环境用相对路径（走代理），生产环境用完整地址
+﻿// 浠庣幆澧冨彉閲忚幏鍙?API 鍦板潃锛屽紑鍙戠幆澧冪敤鐩稿璺緞锛堣蛋浠ｇ悊锛夛紝鐢熶骇鐜鐢ㄥ畬鏁村湴鍧€
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -17,7 +17,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return response.json()
 }
 
-// 照片相关 API
+// 鐓х墖鐩稿叧 API
 export const photosApi = {
   getAll: () => request<{ photos: Photo[] }>('/photos'),
   getFeatured: () => request<{ photos: Photo[] }>('/photos/featured'),
@@ -34,7 +34,7 @@ export const photosApi = {
     const data = await res.json()
     
     if (!res.ok) {
-      throw new Error(data.error || '上传失败')
+      throw new Error(data.error || '涓婁紶澶辫触')
     }
     
     return data
@@ -56,7 +56,7 @@ export const photosApi = {
     }),
 }
 
-// 音乐相关 API
+// 闊充箰鐩稿叧 API
 export const musicApi = {
   getAll: () => request<{ tracks: MusicTrack[] }>('/music'),
   upload: async (formData: FormData) => {
@@ -71,7 +71,7 @@ export const musicApi = {
     const data = await res.json()
     
     if (!res.ok) {
-      throw new Error(data.error || '上传失败')
+      throw new Error(data.error || '涓婁紶澶辫触')
     }
     
     return data
@@ -85,7 +85,7 @@ export const musicApi = {
     }),
 }
 
-// 设置相关 API
+// 璁剧疆鐩稿叧 API
 export const settingsApi = {
   get: () => request<{ settings: SiteSettings }>('/settings'),
   update: (data: Partial<SiteSettings>) =>
@@ -98,7 +98,7 @@ export const settingsApi = {
     }),
 }
 
-// 认证相关 API
+// 璁よ瘉鐩稿叧 API
 export const authApi = {
   login: (username: string, password: string) =>
     request<{ token: string; user: AdminUser }>('/auth/login', {
@@ -111,9 +111,27 @@ export const authApi = {
         'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     }),
+  changePassword: (oldPassword: string, newPassword: string) =>
+    request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ oldPassword, newPassword }),
+      headers: {
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
+      },
+    }),
+}>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+  verify: () =>
+    request<{ valid: boolean }>('/auth/verify', {
+      headers: {
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
+      },
+    }),
 }
 
-// 联系表单 API
+// 鑱旂郴琛ㄥ崟 API
 export const contactApi = {
   submit: (data: { name: string; email: string; message: string }) =>
     request('/contact', {
@@ -129,3 +147,4 @@ export const contactApi = {
 }
 
 import type { Photo, MusicTrack, SiteSettings, ContactMessage, AdminUser } from '../types'
+
