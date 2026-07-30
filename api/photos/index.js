@@ -99,7 +99,12 @@ export default apiHandler(async (req, res) => {
   if (req.method === 'PUT') {
     requireAuth(req)
 
-    const { photos } = req.body
+    // 手动解析 JSON body（因为 bodyParser 被禁用了）
+    let body = ''
+    for await (const chunk of req) {
+      body += chunk.toString()
+    }
+    const { photos } = JSON.parse(body || '{}')
 
     if (!photos || !Array.isArray(photos)) {
       return error(res, '请提供照片排序数组', 400)

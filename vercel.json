@@ -17,6 +17,10 @@
       "destination": "/api/photos/detail"
     },
     {
+      "source": "/api/contact/messages/:id",
+      "destination": "/api/contact/messages"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*"
     },
@@ -28,7 +32,9 @@
   "functions": {
     "api/**/*.js": {
       "maxDuration": 10,
-      "regions": ["hnd1"]
+      "regions": [
+        "hnd1"
+      ]
     }
   }
 }

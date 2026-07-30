@@ -111,7 +111,12 @@ export default apiHandler(async (req, res) => {
   if (req.method === 'PUT') {
     requireAuth(req)
 
-    const { tracks } = req.body
+    // 手动解析 JSON body（因为 bodyParser 被禁用了）
+    let body = ''
+    for await (const chunk of req) {
+      body += chunk.toString()
+    }
+    const { tracks } = JSON.parse(body || '{}')
 
     if (!tracks || !Array.isArray(tracks)) {
       return error(res, '请提供音乐排序数组', 400)
