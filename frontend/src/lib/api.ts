@@ -55,7 +55,7 @@ export const photosApi = {
       },
     }),
   reorder: (photos: any[]) =>
-    request('/photos', {
+    request('/photos/reorder', {
       method: 'PUT',
       body: JSON.stringify({ photos }),
       headers: {
@@ -92,7 +92,7 @@ export const musicApi = {
       },
     }),
   reorder: (tracks: any[]) =>
-    request('/music', {
+    request('/music/reorder', {
       method: 'PUT',
       body: JSON.stringify({ tracks }),
       headers: {
