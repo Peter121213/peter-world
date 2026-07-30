@@ -38,6 +38,9 @@ const AdminPhotos = () => {
   })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [isSavingOrder, setIsSavingOrder] = useState(false)
 
   const categories = ['全部', '风景', '人像', '街拍', '创意', '生活']
 
@@ -76,6 +79,53 @@ const AdminPhotos = () => {
       selectedCategory === '全部' || photo.category === selectedCategory
     return matchesSearch && matchesCategory
   })
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleDrop = async (dropIndex: number) => {
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+
+    const newPhotos = [...filteredPhotos]
+    const [draggedPhoto] = newPhotos.splice(draggedIndex, 1)
+    newPhotos.splice(dropIndex, 0, draggedPhoto)
+
+    // 更新完整的 photos 数组
+    const newAllPhotos = [...photos]
+    // 找到这些照片在原数组中的位置并更新
+    // 简单处理：重新排序所有照片
+    setPhotos(newPhotos)
+    
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+
+    // 保存排序
+    try {
+      setIsSavingOrder(true)
+      await photosApi.reorder(newPhotos)
+    } catch (error) {
+      console.error('保存排序失败:', error)
+      alert('保存排序失败')
+      // 重新获取数据
+      fetchPhotos()
+    } finally {
+      setIsSavingOrder(false)
+    }
+  }
 
   const handleDelete = async (id: number) => {
     if (!confirm('确定要删除这张照片吗？')) return
@@ -219,10 +269,21 @@ const AdminPhotos = () => {
             {filteredPhotos.map((photo, index) => (
               <motion.div
                 key={photo.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={() => handleDrop(index)}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                className="bg-card/50 rounded-xl overflow-hidden border border-white/10 group"
+                className={`bg-card/50 rounded-xl overflow-hidden border group cursor-move transition-all ${
+                  draggedIndex === index ? 'opacity-50 scale-95' : ''
+                } ${
+                  dragOverIndex === index && draggedIndex !== index
+                    ? 'border-primary border-2'
+                    : 'border-white/10'
+                }`}
               >
                 {/* 图片 */}
                 <div className="relative aspect-[4/3] overflow-hidden">

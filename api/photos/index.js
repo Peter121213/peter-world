@@ -25,7 +25,7 @@ export default apiHandler(async (req, res) => {
       query = query.eq('is_featured', true)
     }
 
-    query = query.order('created_at', { ascending: false })
+    query = query.order('is_featured', { ascending: false }).order('sort_order', { ascending: true })
 
     const { data: photos, error: dbError } = await query
 
@@ -93,6 +93,32 @@ export default apiHandler(async (req, res) => {
     }
 
     return success(res, { photo }, 201)
+  }
+
+  // PUT - 批量更新排序
+  if (req.method === 'PUT') {
+    requireAuth(req)
+
+    const { photos } = req.body
+
+    if (!photos || !Array.isArray(photos)) {
+      return error(res, '请提供照片排序数组', 400)
+    }
+
+    // 批量更新 sort_order
+    const updates = photos.map((photo, index) =>
+      supabase
+        .from('photos')
+        .update({ 
+          sort_order: index,
+          is_featured: photo.is_featured
+        })
+        .eq('id', photo.id)
+    )
+
+    await Promise.all(updates)
+
+    return success(res, { message: '排序更新成功' })
   }
 
   return error(res, '方法不允许', 405)

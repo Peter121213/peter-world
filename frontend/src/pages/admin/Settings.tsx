@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Settings as SettingsIcon,
@@ -20,8 +20,8 @@ const AdminSettings = () => {
   const [loading, setLoading] = useState(true)
 
   const [generalSettings, setGeneralSettings] = useState({
-    siteName: 'Peter 鐨勫皬涓栫晫',
-    siteDescription: '鐢ㄩ暅澶磋褰曠編濂斤紝鐢ㄩ煶涔愪紶閫掓儏鎰?,
+    siteName: 'Peter 的小世界',
+    siteDescription: '用镜头记录美好，用音乐传递情感',
   })
 
   const [heroSettings, setHeroSettings] = useState({
@@ -31,7 +31,7 @@ const AdminSettings = () => {
   })
 
   const [profileSettings, setProfileSettings] = useState({
-    aboutTitle: '鍏充簬鎴?,
+    aboutTitle: '关于我',
     aboutContent: '',
     aboutImage: '',
     aboutPageImage: '',
@@ -39,7 +39,7 @@ const AdminSettings = () => {
   })
 
   const [musicSettings, setMusicSettings] = useState({
-    musicSectionTitle: '闊充箰闄即',
+    musicSectionTitle: '音乐陪伴',
     musicSectionDescription: '',
   })
 
@@ -57,15 +57,15 @@ const AdminSettings = () => {
   })
 
   const tabs = [
-    { id: 'general', label: '鍩烘湰璁剧疆', icon: Globe },
-    { id: 'hero', label: '棣栭〉 Hero', icon: Image },
-    { id: 'profile', label: '涓汉璧勬枡', icon: User },
-    { id: 'music', label: '闊充箰鍖哄煙', icon: Music },
-    { id: 'social', label: '绀句氦閾炬帴', icon: Link },
-    { id: 'password', label: '淇敼瀵嗙爜', icon: Lock },
+    { id: 'general', label: '基本设置', icon: Globe },
+    { id: 'hero', label: '首页 Hero', icon: Image },
+    { id: 'profile', label: '个人资料', icon: User },
+    { id: 'music', label: '音乐区域', icon: Music },
+    { id: 'social', label: '社交链接', icon: Link },
+    { id: 'password', label: '修改密码', icon: Lock },
   ]
 
-  // 椤甸潰鍔犺浇鏃惰幏鍙栬缃?
+  // 页面加载时获取设置
   useEffect(() => {
     fetchSettings()
   }, [])
@@ -77,7 +77,7 @@ const AdminSettings = () => {
       const settings: any = res.settings
 
       setGeneralSettings({
-        siteName: settings.site_name || 'Peter 鐨勫皬涓栫晫',
+        siteName: settings.site_name || 'Peter 的小世界',
         siteDescription: settings.site_description || '',
       })
 
@@ -88,7 +88,7 @@ const AdminSettings = () => {
       })
 
       setProfileSettings({
-        aboutTitle: settings.about_title || '鍏充簬鎴?,
+        aboutTitle: settings.about_title || '关于我',
         aboutContent: settings.about_content || '',
         aboutImage: settings.about_image || '',
         aboutPageImage: settings.about_page_image || '',
@@ -96,7 +96,7 @@ const AdminSettings = () => {
       })
 
       setMusicSettings({
-        musicSectionTitle: settings.music_section_title || '闊充箰闄即',
+        musicSectionTitle: settings.music_section_title || '音乐陪伴',
         musicSectionDescription: settings.music_section_description || '',
       })
 
@@ -107,7 +107,7 @@ const AdminSettings = () => {
         github: settings.social_github || '',
       })
     } catch (error) {
-      console.error('鑾峰彇璁剧疆澶辫触:', error)
+      console.error('获取设置失败:', error)
     } finally {
       setLoading(false)
     }
@@ -118,7 +118,7 @@ const AdminSettings = () => {
     setSaveSuccess(false)
 
     try {
-      // 鏍规嵁褰撳墠鏍囩椤典繚瀛樹笉鍚岀殑璁剧疆
+      // 根据当前标签页保存不同的设置
       let settingsToSave: any = {}
 
       if (activeTab === 'general') {
@@ -153,10 +153,39 @@ const AdminSettings = () => {
           social_github: socialSettings.github,
         }
       } else if (activeTab === 'password') {
-        // 淇敼瀵嗙爜鍔熻兘鏆傛湭瀹炵幇
-        alert('淇敼瀵嗙爜鍔熻兘寮€鍙戜腑锛屾暚璇锋湡寰?)
-        setIsSaving(false)
-        return
+        // 修改密码
+        if (!passwordSettings.currentPassword) {
+          alert('请输入当前密码')
+          setIsSaving(false)
+          return
+        }
+        if (!passwordSettings.newPassword) {
+          alert('请输入新密码')
+          setIsSaving(false)
+          return
+        }
+        if (passwordSettings.newPassword.length < 6) {
+          alert('新密码长度不能少于6位')
+          setIsSaving(false)
+          return
+        }
+        if (passwordSettings.newPassword !== passwordSettings.confirmPassword) {
+          alert('两次输入的新密码不一致')
+          setIsSaving(false)
+          return
+        }
+        
+        await authApi.changePassword(
+          passwordSettings.currentPassword,
+          passwordSettings.newPassword
+        )
+        
+        // 修改成功，清空输入框
+        setPasswordSettings({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        })
       }
 
       await settingsApi.update(settingsToSave)
@@ -164,8 +193,8 @@ const AdminSettings = () => {
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (error) {
-      console.error('淇濆瓨璁剧疆澶辫触:', error)
-      alert('淇濆瓨澶辫触锛岃閲嶈瘯')
+      console.error('保存设置失败:', error)
+      alert('保存失败，请重试')
     } finally {
       setIsSaving(false)
     }
@@ -176,7 +205,7 @@ const AdminSettings = () => {
       return (
         <div className="text-center py-20">
           <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">鍔犺浇涓?..</p>
+          <p className="text-muted-foreground">加载中...</p>
         </div>
       )
     }
@@ -187,7 +216,7 @@ const AdminSettings = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium mb-2">
-                缃戠珯鍚嶇О
+                网站名称
               </label>
               <input
                 type="text"
@@ -203,7 +232,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                缃戠珯鎻忚堪
+                网站描述
               </label>
               <textarea
                 value={generalSettings.siteDescription}
@@ -225,7 +254,7 @@ const AdminSettings = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium mb-2">
-                Hero 鏍囬锛堢敤 \n 鎹㈣锛?
+                Hero 标题（用 \n 换行）
               </label>
               <textarea
                 value={heroSettings.heroTitle}
@@ -241,7 +270,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                Hero 鍓爣棰橈紙鐢?\n 鎹㈣锛?
+                Hero 副标题（用 \n 换行）
               </label>
               <textarea
                 value={heroSettings.heroSubtitle}
@@ -257,7 +286,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                Hero 鑳屾櫙鍥剧墖 URL
+                Hero 背景图片 URL
               </label>
               <input
                 type="url"
@@ -272,7 +301,7 @@ const AdminSettings = () => {
                 className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                鍙互鍏堝湪"鐓х墖绠＄悊"涓婁紶鍥剧墖锛岀劧鍚庡鍒跺浘鐗囬摼鎺ョ矘璐村埌杩欓噷
+                可以先在"照片管理"上传图片，然后复制图片链接粘贴到这里
               </p>
             </div>
           </div>
@@ -283,7 +312,7 @@ const AdminSettings = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium mb-2">
-                鍏充簬鎴戞爣棰?
+                关于我标题
               </label>
               <input
                 type="text"
@@ -299,7 +328,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                涓汉绠€浠嬶紙鐢ㄦ崲琛屽垎娈碉級
+                个人简介（用换行分段）
               </label>
               <textarea
                 value={profileSettings.aboutContent}
@@ -315,7 +344,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                棣栭〉鍏充簬鎴戝浘鐗?URL
+                首页关于我图片 URL
               </label>
               <input
                 type="url"
@@ -332,7 +361,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                鍏充簬鎴戦〉闈㈠ご鍍?URL
+                关于我页面头像 URL
               </label>
               <input
                 type="url"
@@ -347,11 +376,11 @@ const AdminSettings = () => {
                 className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                鍙互鍏堝湪"鐓х墖绠＄悊"涓婁紶鍥剧墖锛岀劧鍚庡鍒跺浘鐗囬摼鎺ョ矘璐村埌杩欓噷
+                可以先在"照片管理"上传图片，然后复制图片链接粘贴到这里
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">鑱旂郴閭</label>
+              <label className="block text-sm font-medium mb-2">联系邮箱</label>
               <input
                 type="email"
                 value={profileSettings.email}
@@ -372,7 +401,7 @@ const AdminSettings = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium mb-2">
-                闊充箰鍖哄煙鏍囬
+                音乐区域标题
               </label>
               <input
                 type="text"
@@ -388,7 +417,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                闊充箰鍖哄煙鎻忚堪锛堢敤 \n 鎹㈣锛?
+                音乐区域描述（用 \n 换行）
               </label>
               <textarea
                 value={musicSettings.musicSectionDescription}
@@ -409,7 +438,7 @@ const AdminSettings = () => {
         return (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2">寰崥</label>
+              <label className="block text-sm font-medium mb-2">微博</label>
               <input
                 type="url"
                 value={socialSettings.weibo}
@@ -469,7 +498,7 @@ const AdminSettings = () => {
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              鐣欑┖鐨勭ぞ浜ら摼鎺ュ皢涓嶄細鍦ㄧ綉绔欎笂鏄剧ず
+              留空的社交链接将不会在网站上显示
             </p>
           </div>
         )
@@ -479,7 +508,7 @@ const AdminSettings = () => {
           <div className="space-y-6 max-w-md">
             <div>
               <label className="block text-sm font-medium mb-2">
-                褰撳墠瀵嗙爜
+                当前密码
               </label>
               <input
                 type="password"
@@ -491,11 +520,11 @@ const AdminSettings = () => {
                   }))
                 }
                 className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
-                placeholder="璇疯緭鍏ュ綋鍓嶅瘑鐮?
+                placeholder="请输入当前密码"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">鏂板瘑鐮?/label>
+              <label className="block text-sm font-medium mb-2">新密码</label>
               <input
                 type="password"
                 value={passwordSettings.newPassword}
@@ -506,12 +535,12 @@ const AdminSettings = () => {
                   }))
                 }
                 className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
-                placeholder="璇疯緭鍏ユ柊瀵嗙爜"
+                placeholder="请输入新密码"
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                纭鏂板瘑鐮?
+                确认新密码
               </label>
               <input
                 type="password"
@@ -523,7 +552,7 @@ const AdminSettings = () => {
                   }))
                 }
                 className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
-                placeholder="璇峰啀娆¤緭鍏ユ柊瀵嗙爜"
+                placeholder="请再次输入新密码"
               />
             </div>
             
@@ -537,11 +566,11 @@ const AdminSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* 椤甸潰鏍囬 */}
+      {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold mb-1">缃戠珯璁剧疆</h1>
-          <p className="text-muted-foreground">绠＄悊浣犵殑缃戠珯鍩烘湰淇℃伅</p>
+          <h1 className="text-2xl font-bold mb-1">网站设置</h1>
+          <p className="text-muted-foreground">管理你的网站基本信息</p>
         </div>
         <button
           onClick={handleSave}
@@ -551,30 +580,30 @@ const AdminSettings = () => {
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>淇濆瓨涓?..</span>
+              <span>保存中...</span>
             </>
           ) : (
             <>
               <Save className="w-4 h-4" />
-              <span>淇濆瓨璁剧疆</span>
+              <span>保存设置</span>
             </>
           )}
         </button>
       </div>
 
-      {/* 淇濆瓨鎴愬姛鎻愮ず */}
+      {/* 保存成功提示 */}
       {saveSuccess && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-green-500 text-center"
         >
-          鉁?璁剧疆淇濆瓨鎴愬姛锛?
+          ✓ 设置保存成功！
         </motion.div>
       )}
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* 渚ц竟鏍忔爣绛?*/}
+        {/* 侧边栏标签 */}
         <div className="lg:w-56 shrink-0">
           <div className="bg-card/50 rounded-xl border border-white/10 p-2">
             {tabs.map((tab) => {
@@ -597,7 +626,7 @@ const AdminSettings = () => {
           </div>
         </div>
 
-        {/* 鍐呭鍖哄煙 */}
+        {/* 内容区域 */}
         <div className="flex-1">
           <motion.div
             key={activeTab}
@@ -615,4 +644,3 @@ const AdminSettings = () => {
 }
 
 export default AdminSettings
-

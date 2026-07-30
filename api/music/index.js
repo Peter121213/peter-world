@@ -16,7 +16,7 @@ export default apiHandler(async (req, res) => {
     const { data: tracks, error: dbError } = await supabase
       .from('music_tracks')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order('sort_order', { ascending: true })
 
     if (dbError) {
       return error(res, '获取音乐列表失败')
@@ -105,6 +105,29 @@ export default apiHandler(async (req, res) => {
     }
 
     return success(res, { track }, 201)
+  }
+
+  // PUT - 批量更新排序
+  if (req.method === 'PUT') {
+    requireAuth(req)
+
+    const { tracks } = req.body
+
+    if (!tracks || !Array.isArray(tracks)) {
+      return error(res, '请提供音乐排序数组', 400)
+    }
+
+    // 批量更新 sort_order
+    const updates = tracks.map((track, index) =>
+      supabase
+        .from('music_tracks')
+        .update({ sort_order: index })
+        .eq('id', track.id)
+    )
+
+    await Promise.all(updates)
+
+    return success(res, { message: '排序更新成功' })
   }
 
   return error(res, '方法不允许', 405)

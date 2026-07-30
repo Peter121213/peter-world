@@ -32,6 +32,9 @@ const AdminMusic = () => {
   })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [isSavingOrder, setIsSavingOrder] = useState(false)
   const [playingId, setPlayingId] = useState<number | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -59,6 +62,48 @@ const AdminMusic = () => {
       console.error('获取音乐列表失败:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleDrop = async (dropIndex: number) => {
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+
+    const newTracks = [...tracks]
+    const [draggedTrack] = newTracks.splice(draggedIndex, 1)
+    newTracks.splice(dropIndex, 0, draggedTrack)
+
+    setTracks(newTracks)
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+
+    // 保存排序
+    try {
+      setIsSavingOrder(true)
+      await musicApi.reorder(newTracks)
+    } catch (error) {
+      console.error('保存排序失败:', error)
+      alert('保存排序失败')
+      // 重新获取数据
+      fetchTracks()
+    } finally {
+      setIsSavingOrder(false)
     }
   }
 
@@ -154,7 +199,7 @@ const AdminMusic = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-1">音乐管理</h1>
-          <p className="text-muted-foreground">管理你的背景音乐播放列表</p>
+          <p className="text-muted-foreground">管理你的背景音乐播放列表 · 拖拽歌曲可调整排序</p>
         </div>
         <button
           onClick={() => setIsUploadModalOpen(true)}
@@ -202,10 +247,21 @@ const AdminMusic = () => {
               {tracks.map((track, index) => (
                 <motion.tr
                   key={track.id}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={() => handleDrop(index)}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                  className={`border-b transition-colors cursor-move ${
+                    draggedIndex === index ? 'opacity-50 bg-primary/5' : ''
+                  } ${
+                    dragOverIndex === index && draggedIndex !== index
+                      ? 'border-primary border-t-2 border-b-2 bg-primary/5'
+                      : 'border-white/5 hover:bg-white/5'
+                  }`}
                 >
                   <td className="py-4 px-6">
                     <button
