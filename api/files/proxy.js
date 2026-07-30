@@ -13,8 +13,8 @@ export default apiHandler(async (req, res) => {
     return error(res, '方法不允许', 405)
   }
 
-  const { path } = req.query
-  const key = Array.isArray(path) ? path.join('/') : path
+  const fileParam = req.query.file
+  const key = Array.isArray(fileParam) ? fileParam.join('/') : fileParam
 
   if (!key) {
     return error(res, '文件路径不能为空', 400)
