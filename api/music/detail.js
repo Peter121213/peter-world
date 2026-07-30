@@ -4,7 +4,7 @@ import { requireAuth } from '../_lib/auth'
 import { apiHandler, success, error } from '../_lib/response'
 
 export default apiHandler(async (req, res) => {
-  const { id } = req.query
+  const id = req.query.id
 
   // GET - 获取单首音乐
   if (req.method === 'GET') {

@@ -9,6 +9,14 @@
       "destination": "/api/files/proxy"
     },
     {
+      "source": "/api/music/:id",
+      "destination": "/api/music/detail"
+    },
+    {
+      "source": "/api/photos/:id",
+      "destination": "/api/photos/detail"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/:path*"
     },
