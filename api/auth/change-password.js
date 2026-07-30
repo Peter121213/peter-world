@@ -29,7 +29,7 @@ export default apiHandler(async (req, res) => {
   const { data: dbUser, error: dbError } = await supabase
     .from('users')
     .select('*')
-    .eq('id', user.id)
+    .eq('id', user.userId)
     .single()
 
   if (dbError || !dbUser) {
@@ -50,7 +50,7 @@ export default apiHandler(async (req, res) => {
   const { error: updateError } = await supabase
     .from('users')
     .update({ password_hash: newPasswordHash })
-    .eq('id', user.id)
+    .eq('id', user.userId)
 
   if (updateError) {
     return error(res, '修改密码失败')

@@ -186,6 +186,11 @@ const AdminSettings = () => {
           newPassword: '',
           confirmPassword: '',
         })
+        
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 3000)
+        setIsSaving(false)
+        return
       }
 
       await settingsApi.update(settingsToSave)
