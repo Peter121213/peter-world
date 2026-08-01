@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Mail,
@@ -9,8 +9,7 @@ import {
   MessageCircle,
   CheckCircle,
 } from 'lucide-react'
-import { settingsApi } from '@/lib/api'
-import type { SiteSettings } from '@/types'
+import { useSettings } from '@/contexts/SettingsContext'
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -20,133 +19,7 @@ const Contact = () => {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [settings, setSettings] = useState<SiteSettings | null>(null)
-  const [settingsLoading, setSettingsLoading] = useState(true)
-
-  useEffect(() => {
-    fetchSettings()
-  }, [])
-
-  const fetchSettings = async () => {
-    try {
-      setSettingsLoading(true)
-      const res = await settingsApi.get()
-      const s: any = res.settings
-      setSettings({
-        // 基本设置
-        siteName: s.site_name || 'Peter 的小世界',
-        siteDescription: s.site_description || '',
-        navHome: s.nav_home || '首页',
-        navAlbum: s.nav_album || '相册',
-        navBlog: s.nav_blog || '生活随笔',
-        navAbout: s.nav_about || '关于我',
-        navContact: s.nav_contact || '联系我',
-        footerCopyright: s.footer_copyright || '',
-
-        // 首页 - Hero
-        heroBadge: s.hero_badge || '',
-        heroTitle: s.hero_title || '',
-        heroSubtitle: s.hero_subtitle || '',
-        heroButton1: s.hero_button1 || '',
-        heroButton2: s.hero_button2 || '',
-        heroImage: s.hero_image || '',
-
-        // 首页 - 精选照片
-        featuredPhotosBadge: s.featured_photos_badge || '',
-        featuredPhotosTitle: s.featured_photos_title || '',
-        featuredPhotosDesc: s.featured_photos_desc || '',
-        featuredPhotosViewAll: s.featured_photos_view_all || '',
-
-        // 首页 - 最近随笔
-        recentPostsBadge: s.recent_posts_badge || '',
-        recentPostsTitle: s.recent_posts_title || '',
-        recentPostsDesc: s.recent_posts_desc || '',
-        recentPostsViewAll: s.recent_posts_view_all || '',
-
-        // 首页 - 音乐
-        musicBadge: s.music_badge || '',
-        musicSectionTitle: s.music_section_title || '',
-        musicSectionDescription: s.music_section_description || '',
-        musicButton: s.music_button || '',
-
-        // 首页 - 关于我预览
-        aboutTitle: s.about_title || '',
-        aboutContent: s.about_content || '',
-        aboutImage: s.about_image || '',
-        aboutPreviewButton: s.about_preview_button || '',
-
-        // 相册页面
-        albumBadge: s.album_badge || '',
-        albumTitle: s.album_title || '',
-        albumDesc: s.album_desc || '',
-        albumCategoryAll: s.album_category_all || '',
-        albumCategory1: s.album_category_1 || '',
-        albumCategory2: s.album_category_2 || '',
-        albumCategory3: s.album_category_3 || '',
-        albumCategory4: s.album_category_4 || '',
-        albumCategory5: s.album_category_5 || '',
-        albumEmpty: s.album_empty || '',
-
-        // 生活随笔页面
-        blogBadge: s.blog_badge || '',
-        blogTitle: s.blog_title || '',
-        blogDesc: s.blog_desc || '',
-        blogEmpty: s.blog_empty || '',
-
-        // 关于我页面
-        aboutBadge: s.about_badge || '',
-        aboutPageDesc: s.about_page_desc || '',
-        aboutLocation: s.about_location || '',
-        aboutLove: s.about_love || '',
-        aboutButton: s.about_button || '',
-        aboutPageImage: s.about_page_image || '',
-
-        // 关于我页面 - 健身
-        fitnessBadge: s.fitness_badge || '',
-        fitnessTitle: s.fitness_title || '',
-        fitnessDesc: s.fitness_desc || '',
-        fitnessTag1: s.fitness_tag_1 || '',
-        fitnessTag2: s.fitness_tag_2 || '',
-        fitnessTag3: s.fitness_tag_3 || '',
-        fitnessTag4: s.fitness_tag_4 || '',
-        fitnessTag5: s.fitness_tag_5 || '',
-        fitnessPhotosPlaceholder: s.fitness_photos_placeholder || '',
-
-        // 关于我页面 - 兴趣爱好
-        hobbiesTitle: s.hobbies_title || '',
-        hobby1: s.hobby_1 || '',
-        hobby2: s.hobby_2 || '',
-        hobby3: s.hobby_3 || '',
-        hobby4: s.hobby_4 || '',
-        hobby5: s.hobby_5 || '',
-        hobby6: s.hobby_6 || '',
-
-        // 联系页面
-        contactBadge: s.contact_badge || 'Contact',
-        contactTitle: s.contact_title || '联系我',
-        contactDesc: s.contact_desc || '有任何问题、合作意向，或者只是想打个招呼？\n欢迎随时联系我，我会尽快回复你。',
-        contactEmail: s.contact_email || '',
-        contactNamePlaceholder: s.contact_name_placeholder || '你的名字',
-        contactEmailPlaceholder: s.contact_email_placeholder || 'your@email.com',
-        contactMessagePlaceholder: s.contact_message_placeholder || '想说点什么...',
-        contactButton: s.contact_button || '发送留言',
-        contactSuccess: s.contact_success || '感谢你的留言，我会尽快回复你。',
-
-        // 社交链接
-        socialLinks: {
-          weibo: s.social_weibo || '',
-          instagram: s.social_instagram || '',
-          x: s.social_x || '',
-          github: s.social_github || '',
-          email: s.contact_email || '',
-        },
-      })
-    } catch (error) {
-      console.error('获取设置失败:', error)
-    } finally {
-      setSettingsLoading(false)
-    }
-  }
+  const { settings } = useSettings()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -200,12 +73,7 @@ const Contact = () => {
   const contactEmail = settings?.socialLinks?.email || 'hello@peter.world'
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: settingsLoading ? 0 : 1 }}
-      transition={{ duration: 0.3 }}
-      className="pt-24 md:pt-28 pb-20 px-4"
-    >
+    <div className="pt-24 md:pt-28 pb-20 px-4">
       <div className="max-w-5xl mx-auto">
         {/* 页面标题 */}
         <motion.div
@@ -386,7 +254,7 @@ const Contact = () => {
           </motion.div>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 
