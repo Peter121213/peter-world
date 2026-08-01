@@ -214,7 +214,12 @@ const Home = () => {
   const aboutPreviewButton = settings?.aboutPreviewButton || '了解更多'
 
   return (
-    <div className="pt-16 md:pt-20">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: settingsLoading ? 0 : 1 }}
+      transition={{ duration: 0.3 }}
+      className="pt-16 md:pt-20"
+    >
       {/* Hero 区域 */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background">
         {/* 背景图 - 加载完成后淡入显示 */}
@@ -479,7 +484,7 @@ const Home = () => {
           </div>
         </div>
       </section>
-    </div>
+    </motion.div>
   )
 }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { Menu, X, Music } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { settingsApi } from '@/lib/api'
@@ -9,6 +10,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [settings, setSettings] = useState<SiteSettings | null>(null)
+  const [settingsLoading, setSettingsLoading] = useState(true)
   const location = useLocation()
 
   useEffect(() => {
@@ -117,6 +119,8 @@ const Header = () => {
       })
     } catch (error) {
       console.error('获取设置失败:', error)
+    } finally {
+      setSettingsLoading(false)
     }
   }
 
@@ -129,7 +133,10 @@ const Header = () => {
   ]
 
   return (
-    <header
+    <motion.header
+      initial={{ opacity: 0 }}
+      animate={{ opacity: settingsLoading ? 0 : 1 }}
+      transition={{ duration: 0.3 }}
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
         isScrolled
@@ -213,7 +220,7 @@ const Header = () => {
           ))}
         </div>
       </div>
-    </header>
+    </motion.header>
   )
 }
 

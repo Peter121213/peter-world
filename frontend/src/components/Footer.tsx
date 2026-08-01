@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { Github, Instagram, Mail, Heart } from 'lucide-react'
 import { settingsApi } from '@/lib/api'
 import type { SiteSettings } from '@/types'
@@ -6,6 +7,7 @@ import type { SiteSettings } from '@/types'
 const Footer = () => {
   const currentYear = new Date().getFullYear()
   const [settings, setSettings] = useState<SiteSettings | null>(null)
+  const [settingsLoading, setSettingsLoading] = useState(true)
 
   useEffect(() => {
     fetchSettings()
@@ -13,6 +15,7 @@ const Footer = () => {
 
   const fetchSettings = async () => {
     try {
+      setSettingsLoading(true)
       const res = await settingsApi.get()
       const s: any = res.settings
       setSettings({
@@ -101,6 +104,8 @@ const Footer = () => {
       })
     } catch (error) {
       console.error('获取设置失败:', error)
+    } finally {
+      setSettingsLoading(false)
     }
   }
 
@@ -116,7 +121,12 @@ const Footer = () => {
   )
 
   return (
-    <footer className="bg-card/50 border-t border-white/10">
+    <motion.footer
+      initial={{ opacity: 0 }}
+      animate={{ opacity: settingsLoading ? 0 : 1 }}
+      transition={{ duration: 0.3 }}
+      className="bg-card/50 border-t border-white/10"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* 品牌信息 */}
@@ -239,7 +249,7 @@ const Footer = () => {
           </p>
         </div>
       </div>
-    </footer>
+    </motion.footer>
   )
 }
 

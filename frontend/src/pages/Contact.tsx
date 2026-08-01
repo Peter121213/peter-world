@@ -200,7 +200,12 @@ const Contact = () => {
   const contactEmail = settings?.socialLinks?.email || 'hello@peter.world'
 
   return (
-    <div className="pt-24 md:pt-28 pb-20 px-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: settingsLoading ? 0 : 1 }}
+      transition={{ duration: 0.3 }}
+      className="pt-24 md:pt-28 pb-20 px-4"
+    >
       <div className="max-w-5xl mx-auto">
         {/* 页面标题 */}
         <motion.div
@@ -381,7 +386,7 @@ const Contact = () => {
           </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
