@@ -171,9 +171,9 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4">关注我</h4>
             <div className="flex space-x-4">
-              {socialLinks.weibo && (
+              {settings?.socialLinks?.weibo && (
                 <a
-                  href={socialLinks.weibo}
+                  href={settings?.socialLinks?.weibo}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all"
@@ -184,9 +184,9 @@ const Footer = () => {
                   </svg>
                 </a>
               )}
-              {socialLinks.instagram && (
+              {settings?.socialLinks?.instagram && (
                 <a
-                  href={socialLinks.instagram}
+                  href={settings?.socialLinks?.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all"
@@ -195,9 +195,9 @@ const Footer = () => {
                   <Instagram className="w-5 h-5" />
                 </a>
               )}
-              {socialLinks.x && (
+              {settings?.socialLinks?.x && (
                 <a
-                  href={socialLinks.x}
+                  href={settings?.socialLinks?.x}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all"
@@ -206,9 +206,9 @@ const Footer = () => {
                   <XIcon />
                 </a>
               )}
-              {socialLinks.github && (
+              {settings?.socialLinks?.github && (
                 <a
-                  href={socialLinks.github}
+                  href={settings?.socialLinks?.github}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all"
@@ -217,9 +217,9 @@ const Footer = () => {
                   <Github className="w-5 h-5" />
                 </a>
               )}
-              {socialLinks.email && (
+              {settings?.socialLinks?.email && (
                 <a
-                  href={`mailto:${socialLinks.email}`}
+                  href={`mailto:${settings?.socialLinks?.email}`}
                   className="p-2 rounded-full bg-white/5 hover:bg-primary/20 hover:text-primary transition-all"
                   aria-label="Email"
                 >
