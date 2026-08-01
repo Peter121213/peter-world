@@ -49,6 +49,16 @@ create table if not exists contact_messages (
   created_at timestamp with time zone default now()
 );
 
+-- 6. 生活随笔表
+create table if not exists blog_posts (
+  id uuid primary key default uuid_generate_v4(),
+  title text not null,
+  content text default '',
+  cover_image text default '',
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+
 -- 插入默认管理员账号（admin / admin123）
 -- 密码 admin123 的 bcrypt 哈希值
 insert into users (username, password_hash)

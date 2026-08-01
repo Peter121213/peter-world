@@ -59,53 +59,45 @@ const MusicPlayer = () => {
 
   // 音乐列表加载完成后尝试自动播放第一首
   useEffect(() => {
-    if (!loading && tracks.length > 0 && !hasAutoPlayed && audioRef.current) {
-      // 先尝试直接自动播放（浏览器可能会阻止）
-      tryAutoPlay()
-      
-      // 如果直接自动播放失败，监听用户第一次交互后自动播放
-      const handleFirstInteraction = () => {
-        if (!hasAutoPlayed && audioRef.current && tracks.length > 0) {
-          tryAutoPlay()
-        }
-        // 移除监听器，只执行一次
-        document.removeEventListener('click', handleFirstInteraction)
-        document.removeEventListener('keydown', handleFirstInteraction)
-        document.removeEventListener('touchstart', handleFirstInteraction)
-      }
-      
-      document.addEventListener('click', handleFirstInteraction)
-      document.addEventListener('keydown', handleFirstInteraction)
-      document.addEventListener('touchstart', handleFirstInteraction)
-      
-      return () => {
-        document.removeEventListener('click', handleFirstInteraction)
-        document.removeEventListener('keydown', handleFirstInteraction)
-        document.removeEventListener('touchstart', handleFirstInteraction)
-      }
-    }
-  }, [loading, tracks, hasAutoPlayed])
-  
-  // 尝试自动播放
-  const tryAutoPlay = () => {
-    if (!audioRef.current || hasAutoPlayed) return
-    
-    setHasAutoPlayed(true)
+    if (loading || tracks.length === 0 || hasAutoPlayed) return
+    if (!audioRef.current) return
+
+    // 先尝试直接自动播放（浏览器可能会阻止）
     const playPromise = audioRef.current.play()
+    
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
           setIsPlaying(true)
+          setHasAutoPlayed(true)
           console.log('自动播放成功')
         })
-        .catch((error) => {
-          console.log('自动播放被浏览器阻止，等待用户交互后再试', error)
-          setIsPlaying(false)
-          // 重置 hasAutoPlayed，让用户交互后可以再试
-          setHasAutoPlayed(false)
+        .catch(() => {
+          console.log('自动播放被浏览器阻止，等待用户交互后再试')
+          // 自动播放失败，监听用户第一次交互后自动播放
+          const handleFirstInteraction = () => {
+            if (!audioRef.current) return
+            audioRef.current.play()
+              .then(() => {
+                setIsPlaying(true)
+                console.log('用户交互后自动播放成功')
+              })
+              .catch(() => {
+                console.log('用户交互后播放还是失败')
+              })
+            setHasAutoPlayed(true)
+            // 移除监听器，只执行一次
+            document.removeEventListener('click', handleFirstInteraction)
+            document.removeEventListener('keydown', handleFirstInteraction)
+            document.removeEventListener('touchstart', handleFirstInteraction)
+          }
+          
+          document.addEventListener('click', handleFirstInteraction)
+          document.addEventListener('keydown', handleFirstInteraction)
+          document.addEventListener('touchstart', handleFirstInteraction)
         })
     }
-  }
+  }, [loading, tracks, hasAutoPlayed])
 
   useEffect(() => {
     const handleToggleMusic = () => {

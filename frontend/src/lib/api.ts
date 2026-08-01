@@ -137,6 +137,54 @@ export const authApi = {
     }),
 }
 
+// 生活随笔 API
+export const blogApi = {
+  getAll: () => request<{ posts: BlogPost[] }>('/blog'),
+  getRecent: (limit: number = 2) => request<{ posts: BlogPost[] }>(`/blog?limit=${limit}`),
+  getById: (id: string) => request<{ post: BlogPost }>(`/blog/${id}`),
+  create: async (formData: FormData) => {
+    const res = await fetch(`${API_BASE}/blog`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
+      },
+    })
+    
+    const data = await res.json()
+    
+    if (!res.ok) {
+      throw new Error(data.error || '创建失败')
+    }
+    
+    return data
+  },
+  update: async (id: string, formData: FormData) => {
+    const res = await fetch(`${API_BASE}/blog/${id}`, {
+      method: 'PUT',
+      body: formData,
+      headers: {
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
+      },
+    })
+    
+    const data = await res.json()
+    
+    if (!res.ok) {
+      throw new Error(data.error || '更新失败')
+    }
+    
+    return data
+  },
+  delete: (id: string) =>
+    request(`/blog/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
+      },
+    }),
+}
+
 // 联系表单 API
 export const contactApi = {
   submit: (data: { name: string; email: string; message: string }) =>
@@ -152,4 +200,4 @@ export const contactApi = {
     }),
 }
 
-import type { Photo, MusicTrack, SiteSettings, ContactMessage, AdminUser } from '../types'
+import type { Photo, MusicTrack, SiteSettings, ContactMessage, AdminUser, BlogPost } from '../types'

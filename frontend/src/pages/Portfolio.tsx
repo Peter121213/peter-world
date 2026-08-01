@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Camera, Filter } from 'lucide-react'
+import { Image, Filter } from 'lucide-react'
 import PhotoGrid from '@/components/PhotoGrid'
 import { photosApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -12,7 +12,7 @@ const Portfolio = () => {
   const [filteredPhotos, setFilteredPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
 
-  const categories = ['全部', '风景', '人像', '街拍', '创意', '生活']
+  const categories = ['全部', '风景', '人像', '美食', '小动物', '其他']
 
   useEffect(() => {
     fetchPhotos()
@@ -62,16 +62,16 @@ const Portfolio = () => {
           className="text-center mb-16"
         >
           <div className="flex items-center justify-center mb-4">
-            <Camera className="w-5 h-5 text-primary mr-2" />
+            <Image className="w-5 h-5 text-primary mr-2" />
             <span className="text-primary text-sm font-medium tracking-wider uppercase">
-              Portfolio
+              Album
             </span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">作品集</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">相册</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            用镜头记录生活，用光影讲述故事。
+            随手拍的一些照片，记录生活中的点点滴滴
             <br />
-            这里是我的摄影作品集，希望你能喜欢。
+            随便看看吧～
           </p>
         </motion.div>
 
@@ -118,33 +118,7 @@ const Portfolio = () => {
           </motion.div>
         )}
 
-        {/* 统计信息 */}
-        {!loading && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 text-center"
-          >
-            <div>
-              <div className="text-4xl font-bold gradient-text mb-2">{photos.length}+</div>
-              <div className="text-muted-foreground">摄影作品</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold gradient-text mb-2">{categories.length - 1}</div>
-              <div className="text-muted-foreground">作品分类</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold gradient-text mb-2">365+</div>
-              <div className="text-muted-foreground">天坚持拍摄</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold gradient-text mb-2">∞</div>
-              <div className="text-muted-foreground">热爱与热情</div>
-            </div>
-          </motion.div>
-        )}
+
       </div>
     </div>
   )

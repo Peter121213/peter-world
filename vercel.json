@@ -13,6 +13,10 @@
       "destination": "/api/files/proxy"
     },
     {
+      "source": "/api/photos/featured",
+      "destination": "/api/photos?featured=true"
+    },
+    {
       "source": "/api/music/:id",
       "destination": "/api/music/detail"
     },
@@ -23,6 +27,10 @@
     {
       "source": "/api/contact/messages/:id",
       "destination": "/api/contact/messages"
+    },
+    {
+      "source": "/api/blog/:id",
+      "destination": "/api/blog"
     },
     {
       "source": "/api/:path*",

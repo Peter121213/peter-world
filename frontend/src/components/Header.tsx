@@ -22,7 +22,8 @@ const Header = () => {
 
   const navLinks = [
     { name: '首页', path: '/' },
-    { name: '作品集', path: '/portfolio' },
+    { name: '相册', path: '/portfolio' },
+    { name: '生活随笔', path: '/blog' },
     { name: '关于我', path: '/about' },
     { name: '联系我', path: '/contact' },
   ]

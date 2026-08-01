@@ -4,12 +4,14 @@ import Footer from './components/Footer'
 import MusicPlayer from './components/MusicPlayer'
 import Home from './pages/Home'
 import Portfolio from './pages/Portfolio'
+import Blog from './pages/Blog'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminPhotos from './pages/admin/Photos'
 import AdminMusic from './pages/admin/Music'
+import AdminBlog from './pages/admin/Blog'
 import AdminSettings from './pages/admin/Settings'
 import AdminLayout from './pages/admin/Layout'
 
@@ -23,6 +25,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="photos" element={<AdminPhotos />} />
           <Route path="music" element={<AdminMusic />} />
+          <Route path="blog" element={<AdminBlog />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
 
@@ -36,6 +39,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/portfolio" element={<Portfolio />} />
+                  <Route path="/blog" element={<Blog />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
                 </Routes>

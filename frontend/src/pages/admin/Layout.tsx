@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Image,
   Music,
+  FileText,
   Settings,
   LogOut,
   Menu,
@@ -48,6 +49,7 @@ const AdminLayout = () => {
     { path: '/admin', label: '仪表盘', icon: LayoutDashboard },
     { path: '/admin/photos', label: '照片管理', icon: Image },
     { path: '/admin/music', label: '音乐管理', icon: Music },
+    { path: '/admin/blog', label: '随笔管理', icon: FileText },
     { path: '/admin/settings', label: '网站设置', icon: Settings },
   ]
 
