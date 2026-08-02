@@ -119,6 +119,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         contactTitle: s.contact_title || '联系我',
         contactDesc: s.contact_desc || '有任何问题、合作意向，或者只是想打个招呼？\n欢迎随时联系我，我会尽快回复你。',
         contactEmail: s.contact_email || '',
+        contactTip: s.contact_tip || '如果你是通过作品找到我的，欢迎告诉我你最喜欢哪张照片，这会让我很开心的！',
         contactNamePlaceholder: s.contact_name_placeholder || '你的名字',
         contactEmailPlaceholder: s.contact_email_placeholder || 'your@email.com',
         contactMessagePlaceholder: s.contact_message_placeholder || '想说点什么...',

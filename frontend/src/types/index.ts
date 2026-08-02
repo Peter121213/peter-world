@@ -111,6 +111,7 @@ export interface SiteSettings {
   contactTitle: string
   contactDesc: string
   contactEmail: string
+  contactTip: string
   contactNamePlaceholder: string
   contactEmailPlaceholder: string
   contactMessagePlaceholder: string

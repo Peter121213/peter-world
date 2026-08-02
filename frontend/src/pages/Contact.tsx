@@ -141,13 +141,14 @@ const Contact = () => {
               </div>
             )}
 
-            <div className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
-              <h4 className="font-semibold mb-2">💡 小提示</h4>
-              <p className="text-sm text-muted-foreground">
-                如果你是通过作品找到我的，欢迎告诉我你最喜欢哪张照片，
-                这会让我很开心的！
-              </p>
-            </div>
+            {settings?.contactTip && (
+              <div className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                <h4 className="font-semibold mb-2">💡 小提示</h4>
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                  {settings.contactTip}
+                </p>
+              </div>
+            )}
           </motion.div>
 
           {/* 联系表单 */}

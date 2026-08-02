@@ -8,23 +8,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#1A1A1A',
-        foreground: '#FFFFFF',
+        background: '#1E293B',
+        foreground: '#F8FAFC',
         primary: {
           DEFAULT: '#E8893F',
           foreground: '#FFFFFF',
         },
         secondary: {
-          DEFAULT: '#FFFFFF',
-          foreground: '#1A1A1A',
+          DEFAULT: '#F8FAFC',
+          foreground: '#1E293B',
         },
         muted: {
-          DEFAULT: '#666666',
-          foreground: '#999999',
+          DEFAULT: '#64748B',
+          foreground: '#94A3B8',
         },
         card: {
-          DEFAULT: '#2A2A2A',
-          foreground: '#FFFFFF',
+          DEFAULT: '#334155',
+          foreground: '#F8FAFC',
         },
         accent: '#E8893F',
       },

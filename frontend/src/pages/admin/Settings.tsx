@@ -125,6 +125,7 @@ const AdminSettings = () => {
     contactTitle: '',
     contactDesc: '',
     contactEmail: '',
+    contactTip: '',
     contactNamePlaceholder: '',
     contactEmailPlaceholder: '',
     contactMessagePlaceholder: '',
@@ -261,6 +262,7 @@ const AdminSettings = () => {
         contactTitle: s.contact_title || '联系我',
         contactDesc: s.contact_desc || '有任何问题、合作意向，或者只是想打个招呼？\n欢迎随时联系我，我会尽快回复你。',
         contactEmail: s.contact_email || '',
+        contactTip: s.contact_tip || '如果你是通过作品找到我的，欢迎告诉我你最喜欢哪张照片，这会让我很开心的！',
         contactNamePlaceholder: s.contact_name_placeholder || '你的名字',
         contactEmailPlaceholder: s.contact_email_placeholder || 'your@email.com',
         contactMessagePlaceholder: s.contact_message_placeholder || '想说点什么...',
@@ -417,6 +419,7 @@ const AdminSettings = () => {
           contact_title: contactSettings.contactTitle,
           contact_desc: contactSettings.contactDesc,
           contact_email: contactSettings.contactEmail,
+          contact_tip: contactSettings.contactTip,
           contact_name_placeholder: contactSettings.contactNamePlaceholder,
           contact_email_placeholder: contactSettings.contactEmailPlaceholder,
           contact_message_placeholder: contactSettings.contactMessagePlaceholder,
@@ -444,7 +447,7 @@ const AdminSettings = () => {
     }
   }
 
-  // 输入框组件
+  // 输入框组件 - 非受控模式，输入流畅，中文输入法友好
   const FormField = ({ label, description, value, onChange, type = 'text', placeholder, rows }: any) => (
     <div>
       <label className="block text-sm font-medium mb-1.5">
@@ -455,8 +458,8 @@ const AdminSettings = () => {
       )}
       {rows ? (
         <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          defaultValue={value}
+          onBlur={(e) => onChange(e.target.value)}
           rows={rows}
           placeholder={placeholder}
           className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-none"
@@ -464,8 +467,8 @@ const AdminSettings = () => {
       ) : (
         <input
           type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          defaultValue={value}
+          onBlur={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors"
         />
@@ -959,6 +962,7 @@ const AdminSettings = () => {
                   description="还没有健身照片时显示的提示"
                   value={aboutSettings.fitnessPhotosPlaceholder}
                   onChange={(v: string) => setAboutSettings((p) => ({ ...p, fitnessPhotosPlaceholder: v }))}
+                  rows={2}
                 />
               </div>
             </div>
@@ -1040,6 +1044,13 @@ const AdminSettings = () => {
                   onChange={(v: string) => setContactSettings((p) => ({ ...p, contactEmail: v }))}
                   type="email"
                 />
+                <FormField
+                  label="小提示文字"
+                  description="左下角的小提示框，留空则不显示"
+                  value={contactSettings.contactTip}
+                  onChange={(v: string) => setContactSettings((p) => ({ ...p, contactTip: v }))}
+                  rows={3}
+                />
               </div>
             </div>
 
@@ -1062,6 +1073,7 @@ const AdminSettings = () => {
                   label="留言输入框提示"
                   value={contactSettings.contactMessagePlaceholder}
                   onChange={(v: string) => setContactSettings((p) => ({ ...p, contactMessagePlaceholder: v }))}
+                  rows={2}
                 />
                 <FormField
                   label="提交按钮文字"
