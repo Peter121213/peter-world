@@ -8,25 +8,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#1E293B',
-        foreground: '#F8FAFC',
+        background: '#0F172A',
+        foreground: '#F1F5F9',
         primary: {
-          DEFAULT: '#E8893F',
+          DEFAULT: '#3B82F6',
           foreground: '#FFFFFF',
         },
         secondary: {
-          DEFAULT: '#F8FAFC',
-          foreground: '#1E293B',
+          DEFAULT: '#F1F5F9',
+          foreground: '#0F172A',
         },
         muted: {
-          DEFAULT: '#64748B',
+          DEFAULT: '#475569',
           foreground: '#94A3B8',
         },
         card: {
-          DEFAULT: '#334155',
-          foreground: '#F8FAFC',
+          DEFAULT: '#1E293B',
+          foreground: '#F1F5F9',
         },
-        accent: '#E8893F',
+        accent: '#F59E0B',
       },
       fontFamily: {
         sans: ['Noto Sans SC', 'system-ui', 'sans-serif'],
