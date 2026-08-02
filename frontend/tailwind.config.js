@@ -26,7 +26,7 @@ export default {
           DEFAULT: '#1E3A5F',
           foreground: '#E8F0F8',
         },
-        accent: '#F4A261',
+        accent: '#FEC22E',
       },
       fontFamily: {
         sans: ['Noto Sans SC', 'system-ui', 'sans-serif'],
