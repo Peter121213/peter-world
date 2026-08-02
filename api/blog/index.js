@@ -1,8 +1,8 @@
 import { formidable } from 'formidable'
-import { supabase } from './_lib/supabase'
-import { uploadFile, deleteFile } from './_lib/r2'
-import { requireAuth } from './_lib/auth'
-import { apiHandler, success, error } from './_lib/response'
+import { supabase } from '../_lib/supabase'
+import { uploadFile, deleteFile } from '../_lib/r2'
+import { requireAuth } from '../_lib/auth'
+import { apiHandler, success, error } from '../_lib/response'
 
 export const config = {
   api: {
