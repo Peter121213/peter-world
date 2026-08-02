@@ -38,8 +38,8 @@ const About = () => {
           className="text-center mb-16"
         >
           <div className="flex items-center justify-center mb-4">
-            <User className="w-5 h-5 text-primary mr-2" />
-            <span className="text-primary text-sm font-medium tracking-wider uppercase">
+            <User className="w-5 h-5 text-accent mr-2" />
+            <span className="text-accent text-sm font-medium tracking-wider uppercase">
               {settings?.aboutBadge || 'About Me'}
             </span>
           </div>
@@ -117,8 +117,8 @@ const About = () => {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <div className="flex items-center justify-center mb-4">
-                <Dumbbell className="w-5 h-5 text-primary mr-2" />
-                <span className="text-primary text-sm font-medium tracking-wider uppercase">
+                <Dumbbell className="w-5 h-5 text-accent mr-2" />
+                <span className="text-accent text-sm font-medium tracking-wider uppercase">
                   {settings?.fitnessBadge || 'Fitness'}
                 </span>
               </div>

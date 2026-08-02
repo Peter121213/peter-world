@@ -46,8 +46,8 @@ const Blog = () => {
           className="text-center mb-16"
         >
           <div className="flex items-center justify-center mb-4">
-            <FileText className="w-5 h-5 text-primary mr-2" />
-            <span className="text-primary text-sm font-medium tracking-wider uppercase">
+            <FileText className="w-5 h-5 text-accent mr-2" />
+            <span className="text-accent text-sm font-medium tracking-wider uppercase">
               {settings?.blogBadge || 'Blog'}
             </span>
           </div>

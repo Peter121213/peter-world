@@ -110,8 +110,8 @@ const Home = () => {
             />
           </motion.div>
         )}
-        {/* 渐变遮罩 - 一直显示 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
+        {/* 渐变遮罩 - 保证文字清晰 */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background" />
 
         {/* 内容 */}
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
@@ -121,13 +121,13 @@ const Home = () => {
             transition={{ duration: 0.8 }}
           >
             <div className="flex items-center justify-center mb-6">
-              <Sparkles className="w-6 h-6 text-primary mr-2" />
-              <span className="text-primary font-medium">{heroBadge}</span>
+              <Sparkles className="w-6 h-6 text-accent mr-2 drop-shadow-lg" />
+              <span className="text-accent font-medium drop-shadow-lg">{heroBadge}</span>
             </div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight whitespace-pre-line">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight whitespace-pre-line text-accent drop-shadow-2xl">
               {heroTitle}
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed whitespace-pre-line">
+            <p className="text-lg md:text-xl text-foreground mb-10 max-w-2xl mx-auto leading-relaxed whitespace-pre-line drop-shadow-lg">
               {heroSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -165,8 +165,8 @@ const Home = () => {
             className="text-center mb-16"
           >
             <div className="flex items-center justify-center mb-4">
-              <Image className="w-5 h-5 text-primary mr-2" />
-              <span className="text-primary text-sm font-medium tracking-wider uppercase">
+              <Image className="w-5 h-5 text-accent mr-2" />
+              <span className="text-accent text-sm font-medium tracking-wider uppercase">
                 {featuredPhotosBadge}
               </span>
             </div>
@@ -215,8 +215,8 @@ const Home = () => {
               className="text-center mb-12"
             >
               <div className="flex items-center justify-center mb-4">
-                <FileText className="w-5 h-5 text-primary mr-2" />
-                <span className="text-primary text-sm font-medium tracking-wider uppercase">
+                <FileText className="w-5 h-5 text-accent mr-2" />
+                <span className="text-accent text-sm font-medium tracking-wider uppercase">
                   {recentPostsBadge}
                 </span>
               </div>
@@ -287,8 +287,8 @@ const Home = () => {
             transition={{ duration: 0.6 }}
           >
             <div className="flex items-center justify-center mb-4">
-              <Music className="w-5 h-5 text-primary mr-2" />
-              <span className="text-primary text-sm font-medium tracking-wider uppercase">
+              <Music className="w-5 h-5 text-accent mr-2" />
+              <span className="text-accent text-sm font-medium tracking-wider uppercase">
                 {musicBadge}
               </span>
             </div>
