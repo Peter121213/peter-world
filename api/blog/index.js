@@ -49,7 +49,7 @@ export default apiHandler(async (req, res) => {
         return error(res, '请提供标题', 400)
       }
 
-      let updateData: any = {
+      let updateData = {
         title,
         content,
         updated_at: new Date().toISOString(),
@@ -129,7 +129,7 @@ export default apiHandler(async (req, res) => {
       .order('created_at', { ascending: false })
 
     if (limit) {
-      query = query.limit(parseInt(limit as string))
+      query = query.limit(parseInt(limit))
     }
 
     const { data: posts, error: dbError } = await query
