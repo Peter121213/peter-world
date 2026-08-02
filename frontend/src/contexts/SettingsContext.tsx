@@ -35,6 +35,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         navAbout: s.nav_about || '关于我',
         navContact: s.nav_contact || '联系我',
         footerCopyright: s.footer_copyright || '© {year} Peter 的小世界. All rights reserved.',
+        visitCount: s.visit_count || '0',
 
         // 首页 - Hero
         heroBadge: s.hero_badge || '欢迎来到我的小世界',

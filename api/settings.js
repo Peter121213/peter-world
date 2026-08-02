@@ -64,5 +64,36 @@ export default apiHandler(async (req, res) => {
     return success(res, { message: '设置已更新' })
   }
 
+  // POST - 统计访问量
+  if (req.method === 'POST') {
+    const { action } = req.query
+
+    if (action === 'visit') {
+      // 先获取当前访问量
+      const { data: row, error: fetchError } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'visit_count')
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        // PGRST116 是没找到数据的错误，没关系
+        return error(res, '统计访问量失败')
+      }
+
+      const currentCount = row ? parseInt(row.value || '0', 10) : 0
+      const newCount = currentCount + 1
+
+      // 更新访问量
+      await supabase
+        .from('site_settings')
+        .upsert({ key: 'visit_count', value: String(newCount) }, { onConflict: 'key' })
+
+      return success(res, { count: newCount })
+    }
+
+    return error(res, '无效的操作', 400)
+  }
+
   return error(res, '方法不允许', 405)
 })

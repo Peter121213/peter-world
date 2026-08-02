@@ -112,6 +112,10 @@ export const settingsApi = {
         'X-Auth-Token': localStorage.getItem('admin_token') || '',
       },
     }),
+  recordVisit: () =>
+    request('/settings?action=visit', {
+      method: 'POST',
+    }),
 }
 
 // 认证相关 API

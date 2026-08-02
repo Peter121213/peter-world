@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useEffect } from 'react'
 import { SettingsProvider, useSettings } from './contexts/SettingsContext'
+import { settingsApi } from './lib/api'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import MusicPlayer from './components/MusicPlayer'
@@ -20,6 +22,27 @@ import AdminLayout from './pages/admin/Layout'
 // 前台布局 - 带全局淡入效果
 const FrontendLayout = () => {
   const { loading } = useSettings()
+
+  // 统计访问量（24小时内同一个用户只算一次）
+  useEffect(() => {
+    const recordVisit = async () => {
+      try {
+        const lastVisit = localStorage.getItem('last_visit')
+        const now = Date.now()
+        const ONE_DAY = 24 * 60 * 60 * 1000
+
+        if (!lastVisit || now - parseInt(lastVisit, 10) > ONE_DAY) {
+          await settingsApi.recordVisit()
+          localStorage.setItem('last_visit', String(now))
+        }
+      } catch (e) {
+        // 统计失败不影响用户体验
+        console.error('统计访问量失败:', e)
+      }
+    }
+
+    recordVisit()
+  }, [])
 
   return (
     <motion.div

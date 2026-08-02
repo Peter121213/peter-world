@@ -10,8 +10,10 @@ import {
   Loader2,
 } from 'lucide-react'
 import { photosApi, musicApi, contactApi } from '@/lib/api'
+import { useSettings } from '@/contexts/SettingsContext'
 
 const AdminDashboard = () => {
+  const { settings } = useSettings()
   const [stats, setStats] = useState({
     photos: 0,
     music: 0,
@@ -48,7 +50,7 @@ const AdminDashboard = () => {
         photos: photosRes.photos?.length || 0,
         music: musicRes.tracks?.length || 0,
         messages: messagesRes.messages?.length || 0,
-        views: 0, // 访问量功能暂未实现
+        views: parseInt(settings?.visitCount || '0', 10),
       })
 
       // 生成最近活动（基于真实数据）
@@ -135,7 +137,7 @@ const AdminDashboard = () => {
     },
     {
       label: '访问量',
-      value: stats.views,
+      value: parseInt(settings?.visitCount || '0', 10),
       icon: TrendingUp,
       color: 'from-orange-500 to-orange-600',
     },

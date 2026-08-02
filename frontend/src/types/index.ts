@@ -27,6 +27,7 @@ export interface SiteSettings {
   navAbout: string
   navContact: string
   footerCopyright: string
+  visitCount: string
 
   // 首页 - Hero
   heroBadge: string
