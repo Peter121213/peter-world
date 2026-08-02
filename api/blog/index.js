@@ -1,7 +1,7 @@
-import { supabase } from '../_lib/supabase'
-import { uploadFile, deleteFile } from '../_lib/r2'
-import { requireAuth } from '../_lib/auth'
-import { apiHandler, success, error } from '../_lib/response'
+import { supabase } from '../_lib/supabase.js'
+import { uploadFile, deleteFile } from '../_lib/r2.js'
+import { requireAuth } from '../_lib/auth.js'
+import { apiHandler, success, error } from '../_lib/response.js'
 
 export const config = {
   api: {
