@@ -1,4 +1,3 @@
-import { formidable } from 'formidable'
 import { supabase } from '../_lib/supabase'
 import { uploadFile, deleteFile } from '../_lib/r2'
 import { requireAuth } from '../_lib/auth'
@@ -35,6 +34,7 @@ export default apiHandler(async (req, res) => {
       requireAuth(req)
 
       // 解析表单数据（支持上传封面图）
+      const { formidable } = await import('formidable')
       const form = formidable({
         maxFileSize: 10 * 1024 * 1024, // 10MB
       })
@@ -147,6 +147,7 @@ export default apiHandler(async (req, res) => {
     requireAuth(req)
 
     // 解析表单数据（支持上传封面图）
+    const { formidable } = await import('formidable')
     const form = formidable({
       maxFileSize: 10 * 1024 * 1024, // 10MB
     })
