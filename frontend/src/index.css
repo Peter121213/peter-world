@@ -51,16 +51,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0F172A;
+  background: #183153;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #2D5B9C;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3B82F6;
+  background: #F4A261;
 }
 
 /* 图片悬停效果 */
@@ -75,7 +75,7 @@
 
 /* 渐变文字 */
 .gradient-text {
-  background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+  background: linear-gradient(135deg, #F4A261 0%, #E76F51 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

@@ -113,6 +113,23 @@ const Home = () => {
         {/* 渐变遮罩 - 保证文字清晰 */}
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/50 to-background" />
 
+        {/* 装饰元素 - 左上角大引号 */}
+        <div className="absolute top-20 left-10 md:left-20 text-accent/10 text-[200px] font-serif leading-none select-none pointer-events-none">
+          "
+        </div>
+
+        {/* 装饰元素 - 右下角几何图形 */}
+        <div className="absolute bottom-20 right-10 md:right-20 pointer-events-none">
+          <div className="w-16 h-16 border-2 border-accent/20 rounded-full" />
+          <div className="absolute -top-4 -right-4 w-8 h-8 bg-accent/20 rounded-lg rotate-12" />
+        </div>
+
+        {/* 装饰元素 - 左下角小线条 */}
+        <div className="absolute bottom-32 left-10 md:left-20 pointer-events-none">
+          <div className="w-12 h-1 bg-accent/40 rounded-full mb-2" />
+          <div className="w-8 h-1 bg-accent/20 rounded-full" />
+        </div>
+
         {/* 内容 */}
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
           <motion.div
@@ -121,8 +138,10 @@ const Home = () => {
             transition={{ duration: 0.8 }}
           >
             <div className="flex items-center justify-center mb-6">
-              <Sparkles className="w-6 h-6 text-accent mr-2 drop-shadow-lg" />
-              <span className="text-accent font-medium drop-shadow-lg">{heroBadge}</span>
+              <div className="w-8 h-px bg-accent/50 mr-3" />
+              <Sparkles className="w-5 h-5 text-accent mr-2 drop-shadow-lg" />
+              <span className="text-accent font-medium drop-shadow-lg tracking-wider">{heroBadge}</span>
+              <div className="w-8 h-px bg-accent/50 ml-3" />
             </div>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight whitespace-pre-line text-accent drop-shadow-2xl">
               {heroTitle}
@@ -165,10 +184,12 @@ const Home = () => {
             className="text-center mb-16"
           >
             <div className="flex items-center justify-center mb-4">
-              <Image className="w-5 h-5 text-accent mr-2" />
+              <div className="w-8 h-px bg-accent/50 mr-3" />
+              <Image className="w-4 h-4 text-accent mr-2" />
               <span className="text-accent text-sm font-medium tracking-wider uppercase">
                 {featuredPhotosBadge}
               </span>
+              <div className="w-8 h-px bg-accent/50 ml-3" />
             </div>
             <h2 className="section-title">{featuredPhotosTitle}</h2>
             <p className="section-subtitle">
@@ -215,10 +236,12 @@ const Home = () => {
               className="text-center mb-12"
             >
               <div className="flex items-center justify-center mb-4">
-                <FileText className="w-5 h-5 text-accent mr-2" />
+                <div className="w-8 h-px bg-accent/50 mr-3" />
+                <FileText className="w-4 h-4 text-accent mr-2" />
                 <span className="text-accent text-sm font-medium tracking-wider uppercase">
                   {recentPostsBadge}
                 </span>
+                <div className="w-8 h-px bg-accent/50 ml-3" />
               </div>
               <h2 className="section-title">{recentPostsTitle}</h2>
               <p className="section-subtitle">
@@ -287,10 +310,12 @@ const Home = () => {
             transition={{ duration: 0.6 }}
           >
             <div className="flex items-center justify-center mb-4">
-              <Music className="w-5 h-5 text-accent mr-2" />
+              <div className="w-8 h-px bg-accent/50 mr-3" />
+              <Music className="w-4 h-4 text-accent mr-2" />
               <span className="text-accent text-sm font-medium tracking-wider uppercase">
                 {musicBadge}
               </span>
+              <div className="w-8 h-px bg-accent/50 ml-3" />
             </div>
             <h2 className="section-title">{musicTitle}</h2>
             <p className="section-subtitle max-w-2xl mx-auto whitespace-pre-line">
