@@ -143,7 +143,7 @@ const Home = () => {
               <span className="text-accent font-medium drop-shadow-lg tracking-wider">{heroBadge}</span>
               <div className="w-8 h-px bg-accent/50 ml-3" />
             </div>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight whitespace-pre-line text-accent drop-shadow-2xl">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight whitespace-pre-line text-foreground drop-shadow-2xl">
               {heroTitle}
             </h1>
             <p className="text-lg md:text-xl text-foreground mb-10 max-w-2xl mx-auto leading-relaxed whitespace-pre-line drop-shadow-lg">
