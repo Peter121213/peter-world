@@ -371,7 +371,11 @@ const AdminMusic = () => {
                     {track.artist}
                   </td>
                   <td className="py-4 px-6 text-muted-foreground hidden lg:table-cell">
-                    {track.lyrics?.trim() ? '已填写' : '暂无'}
+                    {track.lyrics?.trim()
+                      ? /\[\d{1,2}:\d{2}/.test(track.lyrics)
+                        ? 'LRC'
+                        : '文本'
+                      : '暂无'}
                   </td>
                   <td className="py-4 px-6 text-right">
                     <div className="inline-flex items-center gap-1">
@@ -415,7 +419,8 @@ const AdminMusic = () => {
         <h3 className="font-semibold mb-2">💡 使用提示</h3>
         <ul className="text-sm text-muted-foreground space-y-2">
           <li>• 封面图仅用于音乐页与播放器，不会出现在相册</li>
-          <li>• 歌词选填；前台有歌词则展示，没有则显示「暂无歌词」</li>
+          <li>• 歌词支持上传 .lrc 或粘贴带时间轴的 LRC 文本，前台会随播放滚动高亮</li>
+          <li>• 没有歌词时显示「暂无歌词」；纯文本（无时间标签）会按普通歌词展示</li>
           <li>• 支持 MP3、WAV、OGG 等格式，建议单首不超过 20MB</li>
         </ul>
       </div>
@@ -507,15 +512,30 @@ const AdminMusic = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">歌词（可选）</label>
+                <label className="block text-sm font-medium mb-2">歌词（可选，LRC）</label>
+                <label className="flex items-center justify-center w-full h-12 mb-3 border border-dashed border-white/20 rounded-lg cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors text-sm text-muted-foreground">
+                  上传 .lrc 文件
+                  <input
+                    type="file"
+                    accept=".lrc,text/plain"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const text = await file.text()
+                      setUploadForm((prev) => ({ ...prev, lyrics: text }))
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
                 <textarea
                   value={uploadForm.lyrics}
                   onChange={(e) =>
                     setUploadForm((prev) => ({ ...prev, lyrics: e.target.value }))
                   }
-                  rows={6}
-                  className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-y"
-                  placeholder="粘贴歌词，可不填"
+                  rows={8}
+                  className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-y font-mono text-sm"
+                  placeholder={'[00:11.95] Started out on a one-way train\n[00:14.63] Always knew where I was gonna go next\n...'}
                 />
               </div>
 
@@ -625,15 +645,30 @@ const AdminMusic = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">歌词</label>
+                <label className="block text-sm font-medium mb-2">歌词（LRC）</label>
+                <label className="flex items-center justify-center w-full h-12 mb-3 border border-dashed border-white/20 rounded-lg cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors text-sm text-muted-foreground">
+                  上传 .lrc 文件覆盖当前歌词
+                  <input
+                    type="file"
+                    accept=".lrc,text/plain"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const text = await file.text()
+                      setEditForm((prev) => ({ ...prev, lyrics: text }))
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
                 <textarea
                   value={editForm.lyrics}
                   onChange={(e) =>
                     setEditForm((prev) => ({ ...prev, lyrics: e.target.value }))
                   }
-                  rows={8}
-                  className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-y"
-                  placeholder="可留空；留空前台显示「暂无歌词」"
+                  rows={10}
+                  className="w-full px-4 py-2.5 bg-background/50 border border-white/10 rounded-lg focus:outline-none focus:border-primary transition-colors resize-y font-mono text-sm"
+                  placeholder={'[00:11.95] 歌词内容\n留空则前台显示「暂无歌词」'}
                 />
               </div>
 

@@ -5,12 +5,18 @@ import { musicApi } from '@/lib/api'
 import { useSettings } from '@/contexts/SettingsContext'
 import type { MusicTrack } from '@/types'
 import { cn } from '@/lib/utils'
+import SyncedLyrics from '@/components/SyncedLyrics'
 
 const MusicPage = () => {
   const { settings } = useSettings()
   const [tracks, setTracks] = useState<MusicTrack[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | number | null>(null)
+  const [playback, setPlayback] = useState<{
+    id: string | number | null
+    currentTime: number
+    isPlaying: boolean
+  }>({ id: null, currentTime: 0, isPlaying: false })
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -39,13 +45,39 @@ const MusicPage = () => {
     fetchTracks()
   }, [])
 
+  useEffect(() => {
+    const onPlayback = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (!detail) return
+      setPlayback({
+        id: detail.id,
+        currentTime: detail.currentTime || 0,
+        isPlaying: Boolean(detail.isPlaying),
+      })
+    }
+    window.addEventListener('musicPlayback', onPlayback)
+    return () => window.removeEventListener('musicPlayback', onPlayback)
+  }, [])
+
   const selected = tracks.find((t) => t.id === selectedId) || null
-  const hasLyrics = Boolean(selected?.lyrics?.trim())
+  const lyricsSynced =
+    selected != null &&
+    playback.id != null &&
+    String(playback.id) === String(selected.id)
 
   const playTrack = (track: MusicTrack) => {
     window.dispatchEvent(
       new CustomEvent('playTrack', {
         detail: { id: track.id },
+      })
+    )
+  }
+
+  const seekLyrics = (time: number) => {
+    if (!selected) return
+    window.dispatchEvent(
+      new CustomEvent('seekMusic', {
+        detail: { id: selected.id, time },
       })
     )
   }
@@ -89,7 +121,6 @@ const MusicPage = () => {
 
         {!loading && tracks.length > 0 && (
           <div className="grid lg:grid-cols-5 gap-8 lg:gap-10">
-            {/* 歌单列表 */}
             <div className="lg:col-span-2 space-y-2">
               {tracks.map((track, index) => (
                 <motion.button
@@ -143,7 +174,6 @@ const MusicPage = () => {
               ))}
             </div>
 
-            {/* 歌词 / 详情 */}
             <div className="lg:col-span-3">
               <AnimatePresence mode="wait">
                 {selected && (
@@ -185,17 +215,21 @@ const MusicPage = () => {
                     </div>
 
                     <div className="p-6 md:p-8">
-                      <div className="flex items-center gap-2 mb-4 text-accent">
-                        <Mic2 className="w-4 h-4" />
-                        <span className="text-sm font-medium tracking-wider uppercase">歌词</span>
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <div className="flex items-center gap-2 text-accent">
+                          <Mic2 className="w-4 h-4" />
+                          <span className="text-sm font-medium tracking-wider uppercase">歌词</span>
+                        </div>
+                        {lyricsSynced && playback.isPlaying && (
+                          <span className="text-xs text-muted-foreground">同步滚动中</span>
+                        )}
                       </div>
-                      {hasLyrics ? (
-                        <pre className="whitespace-pre-wrap font-sans text-foreground/90 leading-relaxed text-base md:text-lg">
-                          {selected.lyrics}
-                        </pre>
-                      ) : (
-                        <p className="text-muted-foreground py-8 text-center">暂无歌词</p>
-                      )}
+                      <SyncedLyrics
+                        lyrics={selected.lyrics || ''}
+                        currentTime={lyricsSynced ? playback.currentTime : 0}
+                        active={lyricsSynced}
+                        onSeek={seekLyrics}
+                      />
                     </div>
                   </motion.div>
                 )}

@@ -126,20 +126,70 @@ const MusicPlayer = () => {
     const audio = audioRef.current
     if (!audio) return
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+    const handleTimeUpdate = () => {
+      const t = audio.currentTime
+      setCurrentTime(t)
+      const track = tracks[currentIndex]
+      if (track) {
+        window.dispatchEvent(
+          new CustomEvent('musicPlayback', {
+            detail: {
+              id: track.id,
+              currentTime: t,
+              isPlaying: !audio.paused,
+              duration: audio.duration || 0,
+            },
+          })
+        )
+      }
+    }
     const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => handleNext()
+    const handlePlay = () => setIsPlaying(true)
+    const handlePause = () => setIsPlaying(false)
 
     audio.addEventListener('timeupdate', handleTimeUpdate)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
     audio.addEventListener('ended', handleEnded)
+    audio.addEventListener('play', handlePlay)
+    audio.addEventListener('pause', handlePause)
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
       audio.removeEventListener('ended', handleEnded)
+      audio.removeEventListener('play', handlePlay)
+      audio.removeEventListener('pause', handlePause)
     }
-  }, [currentIndex])
+  }, [currentIndex, tracks])
+
+  useEffect(() => {
+    const handleSeek = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (!audioRef.current || detail?.time == null) return
+      if (detail.id != null) {
+        const index = tracks.findIndex((t) => String(t.id) === String(detail.id))
+        if (index >= 0 && index !== currentIndex) {
+          setCurrentIndex(index)
+          setTimeout(() => {
+            if (!audioRef.current) return
+            audioRef.current.currentTime = detail.time
+            audioRef.current.play().catch(() => {})
+            setIsPlaying(true)
+            setIsOpen(true)
+          }, 120)
+          return
+        }
+      }
+      audioRef.current.currentTime = detail.time
+      if (audioRef.current.paused) {
+        audioRef.current.play().catch(() => {})
+        setIsPlaying(true)
+      }
+    }
+    window.addEventListener('seekMusic', handleSeek)
+    return () => window.removeEventListener('seekMusic', handleSeek)
+  }, [tracks, currentIndex])
 
   useEffect(() => {
     if (audioRef.current) {
