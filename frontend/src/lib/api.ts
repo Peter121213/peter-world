@@ -41,18 +41,31 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     headers,
   })
 
+  const data = await readResponseBody(response)
   if (!response.ok) {
-    let message = `HTTP error! status: ${response.status}`
-    try {
-      const data = await response.json()
-      if (data?.error) message = data.error
-    } catch {
-      // ignore
-    }
-    throw new Error(message)
+    throw new Error(data?.error || `请求失败（HTTP ${response.status}）`)
   }
+  return data
+}
 
-  return response.json()
+async function readResponseBody(res: Response): Promise<any> {
+  const text = await res.text()
+  if (!text) return {}
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    const lowered = text.toLowerCase()
+    if (
+      res.status === 413 ||
+      lowered.includes('request entity too large') ||
+      lowered.includes('payload too large') ||
+      text.startsWith('Request Entity')
+    ) {
+      throw new Error('文件太大（超过约 4.5MB 限制），请压缩封面或换更小的音频后再试')
+    }
+    throw new Error(text.slice(0, 120) || `请求失败（HTTP ${res.status}）`)
+  }
 }
 
 // 照片相关 API
@@ -69,7 +82,7 @@ export const photosApi = {
       body: formData,
       headers: authHeaders(),
     })
-    const data = await res.json()
+    const data = await readResponseBody(res)
     if (!res.ok) throw new Error(data.error || '上传失败')
     return data
   },
@@ -105,7 +118,7 @@ export const musicApi = {
       body: formData,
       headers: authHeaders(),
     })
-    const data = await res.json()
+    const data = await readResponseBody(res)
     if (!res.ok) throw new Error(data.error || '上传失败')
     return data
   },
@@ -132,7 +145,7 @@ export const musicApi = {
       body: formData,
       headers: authHeaders(),
     })
-    const result = await res.json()
+    const result = await readResponseBody(res)
     if (!res.ok) {
       throw new Error(result.error || '更新失败')
     }
@@ -199,7 +212,7 @@ export const blogApi = {
       body: formData,
       headers: authHeaders(),
     })
-    const data = await res.json()
+    const data = await readResponseBody(res)
     if (!res.ok) throw new Error(data.error || '创建失败')
     return data
   },
@@ -211,7 +224,7 @@ export const blogApi = {
       body: formData,
       headers: authHeaders(),
     })
-    const data = await res.json()
+    const data = await readResponseBody(res)
     if (!res.ok) throw new Error(data.error || '更新失败')
     return data
   },

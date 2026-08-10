@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react'
 import { musicApi } from '@/lib/api'
+import { compressImage } from '@/lib/utils'
 
 interface Track {
   id: string | number
@@ -174,6 +175,13 @@ const AdminMusic = () => {
       return
     }
 
+    // Vercel Serverless 请求体约 4.5MB
+    const MAX_BODY = 4.2 * 1024 * 1024
+    if (selectedFile.size > MAX_BODY) {
+      alert('音频文件过大（需小于约 4MB），请先压缩后再上传')
+      return
+    }
+
     setIsUploading(true)
 
     try {
@@ -183,7 +191,12 @@ const AdminMusic = () => {
       formData.append('lyrics', uploadForm.lyrics)
       formData.append('audio', selectedFile)
       if (selectedCover) {
-        formData.append('cover', selectedCover)
+        const cover = await compressImage(selectedCover)
+        if (selectedFile.size + cover.size > MAX_BODY) {
+          alert('音频+封面合计过大，请换更小的音频或封面')
+          return
+        }
+        formData.append('cover', cover)
       }
 
       const res = await musicApi.upload(formData)
@@ -221,11 +234,12 @@ const AdminMusic = () => {
     setIsSaving(true)
     try {
       if (editCover) {
+        const cover = await compressImage(editCover)
         const formData = new FormData()
         formData.append('title', editForm.title)
         formData.append('artist', editForm.artist)
         formData.append('lyrics', editForm.lyrics)
-        formData.append('cover', editCover)
+        formData.append('cover', cover)
         const res = await musicApi.update(editingTrack.id, formData)
         const t = res.track
         setTracks((prev) =>
@@ -418,10 +432,10 @@ const AdminMusic = () => {
       <div className="bg-primary/5 rounded-xl border border-primary/20 p-6">
         <h3 className="font-semibold mb-2">💡 使用提示</h3>
         <ul className="text-sm text-muted-foreground space-y-2">
-          <li>• 封面图仅用于音乐页与播放器，不会出现在相册</li>
+          <li>• 封面图仅用于音乐页与播放器，不会出现在相册；上传前会自动压缩</li>
           <li>• 歌词支持上传 .lrc 或粘贴带时间轴的 LRC 文本，前台会随播放滚动高亮</li>
           <li>• 没有歌词时显示「暂无歌词」；纯文本（无时间标签）会按普通歌词展示</li>
-          <li>• 支持 MP3、WAV、OGG 等格式，建议单首不超过 20MB</li>
+          <li>• 受托管限制，单次上传（音频+封面）建议合计小于 4MB</li>
         </ul>
       </div>
 
