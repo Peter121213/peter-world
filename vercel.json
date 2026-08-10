@@ -18,7 +18,7 @@
     },
     {
       "source": "/api/music/:id",
-      "destination": "/api/music/detail"
+      "destination": "/api/music?id=:id"
     },
     {
       "source": "/api/photos/:id",

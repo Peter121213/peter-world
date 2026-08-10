@@ -34,8 +34,17 @@ function tryVerify(token) {
   }
 }
 
-// 验证 JWT token（cookie 与请求头都尝试，任一有效即可）
-export function verifyAuth(req) {
+function firstQueryValue(value) {
+  if (value == null) return null
+  return Array.isArray(value) ? value[0] : value
+}
+
+/**
+ * 验证 JWT。
+ * 依次尝试：Cookie、X-Auth-Token、Authorization、query.token、body.token
+ * （部分网络环境会改写自定义请求头，因此需要 query / body 兜底）
+ */
+export function verifyAuth(req, extraToken) {
   const candidates = []
 
   const cookies = parseCookies(req.headers.cookie)
@@ -46,12 +55,26 @@ export function verifyAuth(req) {
   const headerToken =
     req.headers['x-auth-token'] ||
     req.headers['X-Auth-Token'] ||
-    (req.headers.authorization?.startsWith('Bearer ')
+    (typeof req.headers.authorization === 'string' &&
+    req.headers.authorization.startsWith('Bearer ')
       ? req.headers.authorization.slice(7)
       : null)
 
   if (headerToken) {
     candidates.push(headerToken)
+  }
+
+  const queryToken = firstQueryValue(req.query?.token)
+  if (queryToken) {
+    candidates.push(queryToken)
+  }
+
+  if (extraToken) {
+    candidates.push(extraToken)
+  }
+
+  if (req.body && typeof req.body === 'object' && req.body.token) {
+    candidates.push(req.body.token)
   }
 
   for (const token of candidates) {
@@ -64,7 +87,6 @@ export function verifyAuth(req) {
   return null
 }
 
-// 生成 JWT token
 export function generateToken(userId, username) {
   return jwt.sign(
     { userId, username },
@@ -73,11 +95,10 @@ export function generateToken(userId, username) {
   )
 }
 
-// 要求认证的辅助函数
-export function requireAuth(req) {
-  const user = verifyAuth(req)
+export function requireAuth(req, extraToken) {
+  const user = verifyAuth(req, extraToken)
   if (!user) {
-    const error = new Error('未授权')
+    const error = new Error('未授权，请重新登录后再试')
     error.statusCode = 401
     throw error
   }

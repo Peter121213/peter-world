@@ -6,13 +6,91 @@ import { apiHandler, success, error } from '../_lib/response'
 
 export const config = {
   api: {
-    bodyParser: false, // 禁用默认 body parser
+    bodyParser: false,
   },
 }
 
+async function readRawBody(req) {
+  let body = ''
+  for await (const chunk of req) {
+    body += chunk.toString()
+  }
+  return body
+}
+
+async function updateTrackById(req, res, id, fields, files) {
+  const updateData = {}
+  let newCoverPath = null
+
+  if (fields.title?.[0] !== undefined) updateData.title = fields.title[0]
+  if (fields.artist?.[0] !== undefined) updateData.artist = fields.artist[0]
+  if (fields.lyrics?.[0] !== undefined) updateData.lyrics = fields.lyrics[0]
+  if (fields.duration?.[0] !== undefined) {
+    updateData.duration = parseInt(fields.duration[0], 10) || 0
+  }
+
+  if (files?.cover?.[0]) {
+    const coverFile = files.cover[0]
+    const coverExt = coverFile.originalFilename.split('.').pop()
+    const coverName = `music/covers/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${coverExt}`
+    const fs = await import('fs')
+    const coverBuffer = fs.readFileSync(coverFile.filepath)
+    await uploadFile(coverName, coverBuffer, coverFile.mimetype)
+    updateData.cover_url = `/api/files/${coverName}`
+    newCoverPath = coverName
+  }
+
+  let oldCoverPath = null
+  if (updateData.cover_url) {
+    const { data: existing } = await supabase
+      .from('music_tracks')
+      .select('cover_url')
+      .eq('id', id)
+      .single()
+    if (existing?.cover_url) {
+      oldCoverPath = existing.cover_url.replace('/api/files/', '')
+    }
+  }
+
+  const { data: track, error: dbError } = await supabase
+    .from('music_tracks')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (dbError) {
+    if (newCoverPath) {
+      await deleteFile(newCoverPath).catch(() => {})
+    }
+    return error(res, '更新音乐失败')
+  }
+
+  if (oldCoverPath && oldCoverPath !== newCoverPath) {
+    await deleteFile(oldCoverPath).catch(() => {})
+  }
+
+  return success(res, { track })
+}
+
 export default apiHandler(async (req, res) => {
-  // GET - 获取音乐列表
+  const id = Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id
+
+  // GET - 单首或列表
   if (req.method === 'GET') {
+    if (id) {
+      const { data: track, error: dbError } = await supabase
+        .from('music_tracks')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (dbError || !track) {
+        return error(res, '音乐不存在', 404)
+      }
+      return success(res, { track })
+    }
+
     const { data: tracks, error: dbError } = await supabase
       .from('music_tracks')
       .select('*')
@@ -27,23 +105,13 @@ export default apiHandler(async (req, res) => {
 
   // POST - 上传音乐
   if (req.method === 'POST') {
-    console.log('POST /api/music called')
-    console.log('Content-Type:', req.headers['content-type'])
-    console.log('Content-Length:', req.headers['content-length'])
-    
     requireAuth(req)
-    
-    console.log('Auth passed, parsing form...')
 
     const form = formidable({
-      maxFileSize: 20 * 1024 * 1024, // 20MB
+      maxFileSize: 20 * 1024 * 1024,
     })
 
     const [fields, files] = await form.parse(req)
-    
-    console.log('Form parsed successfully')
-    console.log('Fields:', Object.keys(fields))
-    console.log('Files:', Object.keys(files))
 
     const title = fields.title?.[0]
     const artist = fields.artist?.[0] || 'Peter'
@@ -62,7 +130,6 @@ export default apiHandler(async (req, res) => {
     const fileExt = audioFile.originalFilename.split('.').pop()
     const fileName = `music/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`
 
-    // 上传到 R2
     const fs = await import('fs')
     const fileBuffer = fs.readFileSync(audioFile.filepath)
 
@@ -70,7 +137,6 @@ export default apiHandler(async (req, res) => {
 
     const audioUrl = `/api/files/${fileName}`
 
-    // 处理封面图（可选；存于 music/covers，不会进入照片库）
     let coverUrl = null
     if (files.cover && files.cover[0]) {
       const coverFile = files.cover[0]
@@ -82,7 +148,6 @@ export default apiHandler(async (req, res) => {
       coverUrl = `/api/files/${coverName}`
     }
 
-    // 保存到数据库
     const { data: track, error: dbError } = await supabase
       .from('music_tracks')
       .insert({
@@ -97,7 +162,6 @@ export default apiHandler(async (req, res) => {
       .single()
 
     if (dbError) {
-      // 数据库插入失败，删除 R2 中的文件
       await deleteFile(fileName).catch(() => {})
       if (coverUrl) {
         const coverPath = coverUrl.replace('/api/files/', '')
@@ -109,22 +173,54 @@ export default apiHandler(async (req, res) => {
     return success(res, { track }, 201)
   }
 
-  // PUT - 批量更新排序
+  // PUT - 有 id 则更新单首；否则批量排序
   if (req.method === 'PUT') {
-    requireAuth(req)
+    const contentType = req.headers['content-type'] || ''
 
-    // 手动解析 JSON body（因为 bodyParser 被禁用了）
-    let body = ''
-    for await (const chunk of req) {
-      body += chunk.toString()
+    if (id) {
+      // 单首更新：先解析 body，再用 query/header/form token 鉴权
+      if (contentType.includes('multipart/form-data')) {
+        const form = formidable({
+          maxFileSize: 10 * 1024 * 1024,
+        })
+        const [fields, files] = await form.parse(req)
+        requireAuth(req, fields.token?.[0])
+        return updateTrackById(req, res, id, fields, files)
+      }
+
+      const raw = await readRawBody(req)
+      let body = {}
+      try {
+        body = JSON.parse(raw || '{}')
+      } catch {
+        return error(res, '无效的请求数据', 400)
+      }
+      requireAuth(req, body.token)
+
+      const fields = {
+        title: body.title !== undefined ? [body.title] : undefined,
+        artist: body.artist !== undefined ? [body.artist] : undefined,
+        lyrics: body.lyrics !== undefined ? [body.lyrics] : undefined,
+        duration: body.duration !== undefined ? [String(body.duration)] : undefined,
+      }
+      return updateTrackById(req, res, id, fields, null)
     }
-    const { tracks } = JSON.parse(body || '{}')
 
+    // 批量排序
+    const raw = await readRawBody(req)
+    let parsed = {}
+    try {
+      parsed = JSON.parse(raw || '{}')
+    } catch {
+      return error(res, '无效的请求数据', 400)
+    }
+    requireAuth(req, parsed.token)
+
+    const { tracks } = parsed
     if (!tracks || !Array.isArray(tracks)) {
       return error(res, '请提供音乐排序数组', 400)
     }
 
-    // 批量更新 sort_order
     const updates = tracks.map((track, index) =>
       supabase
         .from('music_tracks')
@@ -135,6 +231,37 @@ export default apiHandler(async (req, res) => {
     await Promise.all(updates)
 
     return success(res, { message: '排序更新成功' })
+  }
+
+  // DELETE - 删除单首
+  if (req.method === 'DELETE') {
+    requireAuth(req)
+
+    if (!id) {
+      return error(res, '缺少音乐 ID', 400)
+    }
+
+    const { data: track, error: dbError } = await supabase
+      .from('music_tracks')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (dbError || !track) {
+      return error(res, '音乐不存在', 404)
+    }
+
+    const audioPath = track.audio_url.replace('/api/files/', '')
+    await deleteFile(audioPath).catch(() => {})
+
+    if (track.cover_url) {
+      const coverPath = track.cover_url.replace('/api/files/', '')
+      await deleteFile(coverPath).catch(() => {})
+    }
+
+    await supabase.from('music_tracks').delete().eq('id', id)
+
+    return success(res, { message: '音乐已删除' })
   }
 
   return error(res, '方法不允许', 405)
