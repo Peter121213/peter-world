@@ -36,6 +36,20 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         navContact: s.nav_contact || '联系我',
         footerCopyright: s.footer_copyright || '© {year} Peter 的小世界. All rights reserved.',
         visitCount: s.visit_count || '0',
+        visitDaily: (() => {
+          if (s.visit_daily && typeof s.visit_daily === 'object' && !Array.isArray(s.visit_daily)) {
+            return s.visit_daily as Record<string, number>
+          }
+          if (typeof s.visit_daily === 'string') {
+            try {
+              const parsed = JSON.parse(s.visit_daily)
+              return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+            } catch {
+              return {}
+            }
+          }
+          return {}
+        })(),
 
         // 首页 - Hero
         heroBadge: s.hero_badge || '欢迎来到我的小世界',

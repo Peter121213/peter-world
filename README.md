@@ -1,217 +1,158 @@
 # Peter 的小世界
 
-一个个人作品集网站，包含前端展示页面和可视化管理后台。
+个人作品集网站：前台展示 + 可视化管理后台。
 
-## 项目简介
+部署架构：**Vercel（前端 + Serverless API）+ Supabase（数据库）+ Cloudflare R2（文件存储）**。
 
-这是一个基于 React + Node.js + SQLite 的个人网站项目，包含：
+## 功能
 
-- 🎨 **前端展示**：个人作品集网站，包含首页、作品集、关于我、联系我等页面
-- 🎵 **音乐播放器**：右下角悬浮音乐播放器，支持播放列表
-- 📸 **照片展示**：Bento Grid 布局、灯箱效果、分类筛选
-- 🔐 **管理后台**：可视化管理界面，支持照片上传、音乐管理、网站设置
-- 💾 **轻量数据库**：使用 SQLite，无需单独数据库服务
+### 前台
+- 首页：Hero、精选照片、最近随笔、音乐介绍、关于我预览
+- 相册：分类筛选、网格展示、灯箱查看
+- 生活随笔：文章列表与阅读
+- 关于我 / 联系我
+- 右下角悬浮音乐播放器（播放列表、音量控制）
+
+### 管理后台（`/admin`）
+- 仪表盘：数据概览与快捷入口
+- 照片管理：上传、编辑、删除、精选、排序、分类
+- 音乐管理：上传、删除、排序、预览
+- 随笔管理：发布与编辑
+- 网站设置：文案、社交链接、改密等
+
+默认管理员：`admin` / `admin123`（部署后请立刻修改）
 
 ## 技术栈
 
-### 前端
-- React 18 + TypeScript
-- Vite 构建工具
-- Tailwind CSS 样式框架
-- Framer Motion 动画库
-- React Router 路由
-- Lucide React 图标库
-
-### 后端
-- Node.js + Express
-- SQLite 数据库 (better-sqlite3)
-- JWT 身份认证
-- Multer 文件上传
-- bcrypt 密码加密
+| 层 | 技术 |
+|---|---|
+| 前端 | React 18、TypeScript、Vite、Tailwind CSS、Framer Motion、React Router |
+| API | Vercel Serverless Functions（`api/`） |
+| 数据库 | Supabase（PostgreSQL） |
+| 文件存储 | Cloudflare R2（S3 兼容） |
+| 认证 | JWT（Cookie / `X-Auth-Token`） |
 
 ## 项目结构
 
 ```
 peter-world/
-├── frontend/              # 前端项目
+├── frontend/                 # Vite + React 前端
 │   ├── src/
-│   │   ├── components/    # 组件
-│   │   │   └── ui/        # UI组件
-│   │   ├── pages/         # 页面
-│   │   │   └── admin/     # 管理后台页面
-│   │   ├── lib/           # 工具函数和API
-│   │   ├── hooks/         # 自定义hooks
-│   │   ├── types/         # 类型定义
-│   │   ├── App.tsx        # 主应用组件
-│   │   ├── main.tsx       # 入口文件
-│   │   └── index.css      # 全局样式
-│   ├── public/            # 静态资源
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   ├── tailwind.config.js
-│   └── postcss.config.js
-├── backend/               # 后端项目
-│   ├── src/
-│   │   ├── routes/        # 路由
-│   │   ├── middleware/    # 中间件
-│   │   ├── database.ts    # 数据库初始化
-│   │   └── index.ts       # 入口文件
-│   ├── uploads/           # 上传的文件
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── .env
-└── README.md
+│   │   ├── components/       # 公共组件
+│   │   ├── pages/            # 前台页面
+│   │   │   └── admin/        # 管理后台
+│   │   ├── contexts/         # Settings 等上下文
+│   │   ├── lib/              # API 封装、工具函数
+│   │   └── types/            # TypeScript 类型
+│   └── ...
+├── api/                      # Vercel Serverless API
+│   ├── _lib/                 # 共用：auth / supabase / r2 / response
+│   ├── auth/                 # 登录、改密
+│   ├── photos/               # 照片
+│   ├── music/                # 音乐
+│   ├── blog/                 # 随笔
+│   ├── contact/              # 留言
+│   ├── files/                # R2 文件代理
+│   └── settings.js           # 网站设置
+├── supabase_schema.sql       # 数据库初始化 SQL
+├── vercel.json               # 构建、重写、函数配置
+├── .env.example              # 服务端环境变量模板
+└── Vercel部署指南.md         # 详细部署步骤
 ```
 
 ## 快速开始
 
 ### 前置要求
 - Node.js 18+
-- npm 或 yarn
+- npm
+- Supabase 项目（已执行 `supabase_schema.sql`）
+- Cloudflare R2 存储桶与 API Token（本地跑上传相关功能时需要）
 
 ### 1. 安装依赖
 
-#### 前端
 ```bash
-cd frontend
+# 根目录：API 运行时依赖（Supabase、R2、JWT 等）
 npm install
-```
 
-#### 后端
-```bash
-cd backend
+# 前端
+cd frontend
 npm install
 ```
 
 ### 2. 配置环境变量
 
-后端 `.env` 文件（已默认创建）：
+复制根目录 `.env.example` 为 `.env`（或在 Vercel 项目设置中配置）：
+
+```env
+SUPABASE_URL=https://你的项目.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=你的 service_role 密钥
+
+R2_ACCOUNT_ID=你的 Cloudflare 账户 ID
+R2_ACCESS_KEY_ID=你的 R2 Access Key ID
+R2_SECRET_ACCESS_KEY=你的 R2 Secret Access Key
+R2_BUCKET_NAME=peter-world-uploads
+
+JWT_SECRET=请换成足够长的随机字符串
 ```
-PORT=3001
-JWT_SECRET=peter-world-secret-key-2024
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
+
+前端一般不需要单独配置 API 地址；同域部署时请求走 `/api`。本地若要指定远端 API，可在 `frontend/.env` 中设置：
+
+```env
+VITE_API_URL=https://你的域名/api
 ```
 
-### 3. 启动开发服务器
+### 3. 初始化数据库
 
-#### 启动后端
-```bash
-cd backend
-npm run dev
-```
-后端将运行在 http://localhost:3001
+在 Supabase → SQL Editor 中执行项目根目录的 `supabase_schema.sql`。
 
-#### 启动前端
-```bash
-cd frontend
-npm run dev
-```
-前端将运行在 http://localhost:5173
+### 4. 本地开发
 
-### 4. 访问网站
-
-- 前台首页：http://localhost:5173
-- 管理后台：http://localhost:5173/admin
-- 默认账号：admin / admin123
-
-## 功能说明
-
-### 前台功能
-- 🏠 **首页**：Hero 大图、精选作品、音乐介绍、关于我预览
-- 📸 **作品集**：分类筛选、照片网格、灯箱查看
-- 👤 **关于我**：个人介绍、技能展示、时间线、装备清单
-- 📮 **联系我**：联系表单、社交媒体链接
-- 🎵 **音乐播放器**：右下角悬浮，支持播放/暂停、上一首/下一首、音量控制
-
-### 管理后台功能
-- 📊 **仪表盘**：数据统计、最近活动、快捷操作
-- 🖼️ **照片管理**：上传、删除、编辑、设为精选、分类筛选、搜索
-- 🎵 **音乐管理**：上传、删除、播放预览
-- ⚙️ **网站设置**：基本设置、个人资料、社交链接、修改密码
-
-## 部署指南
-
-### 方案一：Vercel + Render（推荐）
-
-#### 前端部署到 Vercel
-1. 将项目推送到 GitHub
-2. 在 Vercel 导入项目
-3. 构建命令：`npm run build`
-4. 输出目录：`dist`
-5. 配置环境变量（API 地址等）
-
-#### 后端部署到 Render
-1. 在 Render 创建 Web Service
-2. 连接 GitHub 仓库
-3. 构建命令：`cd backend && npm install && npm run build`
-4. 启动命令：`cd backend && npm start`
-5. 配置环境变量
-
-### 方案二：本地服务器部署
+推荐用 Vercel CLI，这样前端与 `api/` 函数一起跑：
 
 ```bash
-# 构建前端
-cd frontend
-npm run build
-
-# 构建后端
-cd ../backend
-npm run build
-
-# 使用 pm2 或 systemd 运行后端
-npm install -g pm2
-pm2 start dist/index.js --name peter-world
+npm i -g vercel
+vercel dev
 ```
 
-## 数据库说明
+也可只起前端（`cd frontend && npm run dev`），此时 `/api` 需指向已部署的后端，或自行用 `vercel dev` 起 API。
 
-项目使用 SQLite 数据库，数据库文件会在首次运行时自动创建在 `backend/database.sqlite`。
+- 前台：http://localhost:5173（或 CLI 提示的端口）
+- 后台：http://localhost:5173/admin
 
-### 数据表
-- `users` - 管理员用户
-- `photos` - 照片数据
-- `music_tracks` - 音乐数据
-- `site_settings` - 网站设置（键值对）
-- `contact_messages` - 联系留言
+## 部署
 
-## 自定义配置
+全站部署到 **Vercel**（Root Directory 保持仓库根目录，不要只选 `frontend`）。
 
-### 修改主题色
-编辑 `frontend/tailwind.config.js` 中的 `colors` 配置：
-```js
-primary: {
-  DEFAULT: '#E8893F',  // 修改这里
-  foreground: '#FFFFFF',
-}
-```
+环境变量与域名绑定等细节见：[Vercel部署指南.md](./Vercel部署指南.md)
 
-### 修改默认管理员密码
-编辑 `backend/.env` 文件：
-```
-ADMIN_USERNAME=你的用户名
-ADMIN_PASSWORD=你的密码
-```
+`vercel.json` 已配置：
+- 构建：`cd frontend && npm run build`
+- 输出：`frontend/dist`
+- API 重写与函数区域（`hnd1`）
+
+## 数据库表
+
+| 表 | 说明 |
+|---|---|
+| `users` | 管理员 |
+| `photos` | 照片 |
+| `music_tracks` | 音乐 |
+| `blog_posts` | 生活随笔 |
+| `site_settings` | 网站设置（键值对） |
+| `contact_messages` | 联系留言 |
+
+## 自定义
+
+- **主题色**：编辑 `frontend/tailwind.config.js` 中的 `colors`
+- **页面文案**：后台「网站设置」，或直接改 `site_settings` 表
+- **管理员密码**：后台设置页修改；切勿长期使用默认密码
 
 ## 注意事项
 
-1. **安全**：部署前请务必修改默认管理员密码和 JWT 密钥
-2. **存储**：上传的文件保存在 `backend/uploads` 目录，定期备份
-3. **性能**：图片建议压缩后上传，单张不超过 5MB
-4. **备份**：定期备份 `database.sqlite` 数据库文件
-
-## 开发说明
-
-### 添加新页面
-1. 在 `frontend/src/pages/` 创建页面组件
-2. 在 `frontend/src/App.tsx` 添加路由
-
-### 添加新 API
-1. 在 `backend/src/routes/` 创建路由文件
-2. 在 `backend/src/index.ts` 注册路由
-3. 在 `frontend/src/lib/api.ts` 添加前端调用
+1. 部署前务必更换 `JWT_SECRET` 与默认管理员密码
+2. `SUPABASE_SERVICE_ROLE_KEY` 仅放在服务端环境变量，不要暴露到前端
+3. 上传图片建议先压缩，单张不宜过大
+4. 定期在 Supabase / R2 侧做好数据与文件备份
 
 ## License
 

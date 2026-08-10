@@ -321,16 +321,24 @@ const Home = () => {
             <p className="section-subtitle max-w-2xl mx-auto whitespace-pre-line">
               {musicDesc}
             </p>
-            <button
-              onClick={() => {
-                const event = new CustomEvent('toggleMusic')
-                window.dispatchEvent(event)
-              }}
-              className="btn-primary inline-flex items-center space-x-2"
-            >
-              <Music className="w-5 h-5" />
-              <span>{musicButton}</span>
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                to="/music"
+                className="btn-primary inline-flex items-center space-x-2"
+              >
+                <Music className="w-5 h-5" />
+                <span>{musicButton}</span>
+              </Link>
+              <button
+                onClick={() => {
+                  const event = new CustomEvent('toggleMusic')
+                  window.dispatchEvent(event)
+                }}
+                className="inline-flex items-center space-x-2 px-6 py-3 rounded-lg border border-white/15 hover:bg-white/5 transition-colors"
+              >
+                <span>打开播放器</span>
+              </button>
+            </div>
           </motion.div>
         </div>
       </section>

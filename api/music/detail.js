@@ -1,7 +1,22 @@
+import { formidable } from 'formidable'
 import { supabase } from '../_lib/supabase'
-import { deleteFile } from '../_lib/r2'
+import { uploadFile, deleteFile } from '../_lib/r2'
 import { requireAuth } from '../_lib/auth'
 import { apiHandler, success, error } from '../_lib/response'
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
+
+async function parseJsonBody(req) {
+  let body = ''
+  for await (const chunk of req) {
+    body += chunk.toString()
+  }
+  return JSON.parse(body || '{}')
+}
 
 export default apiHandler(async (req, res) => {
   const id = req.query.id
@@ -21,16 +36,58 @@ export default apiHandler(async (req, res) => {
     return success(res, { track })
   }
 
-  // PUT - 更新音乐
+  // PUT - 更新音乐（JSON 或 multipart：可改标题/艺术家/歌词/封面）
   if (req.method === 'PUT') {
     requireAuth(req)
 
-    const { title, artist, duration } = req.body
-
+    const contentType = req.headers['content-type'] || ''
     const updateData = {}
-    if (title !== undefined) updateData.title = title
-    if (artist !== undefined) updateData.artist = artist
-    if (duration !== undefined) updateData.duration = duration
+    let newCoverPath = null
+
+    if (contentType.includes('multipart/form-data')) {
+      const form = formidable({
+        maxFileSize: 10 * 1024 * 1024,
+      })
+      const [fields, files] = await form.parse(req)
+
+      if (fields.title?.[0] !== undefined) updateData.title = fields.title[0]
+      if (fields.artist?.[0] !== undefined) updateData.artist = fields.artist[0]
+      if (fields.lyrics?.[0] !== undefined) updateData.lyrics = fields.lyrics[0]
+      if (fields.duration?.[0] !== undefined) {
+        updateData.duration = parseInt(fields.duration[0], 10) || 0
+      }
+
+      if (files.cover && files.cover[0]) {
+        const coverFile = files.cover[0]
+        const coverExt = coverFile.originalFilename.split('.').pop()
+        const coverName = `music/covers/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${coverExt}`
+        const fs = await import('fs')
+        const coverBuffer = fs.readFileSync(coverFile.filepath)
+        await uploadFile(coverName, coverBuffer, coverFile.mimetype)
+        updateData.cover_url = `/api/files/${coverName}`
+        newCoverPath = coverName
+      }
+    } else {
+      const body = await parseJsonBody(req)
+      const { title, artist, duration, lyrics } = body
+      if (title !== undefined) updateData.title = title
+      if (artist !== undefined) updateData.artist = artist
+      if (duration !== undefined) updateData.duration = duration
+      if (lyrics !== undefined) updateData.lyrics = lyrics
+    }
+
+    // 换封面前先取旧封面，便于清理
+    let oldCoverPath = null
+    if (updateData.cover_url) {
+      const { data: existing } = await supabase
+        .from('music_tracks')
+        .select('cover_url')
+        .eq('id', id)
+        .single()
+      if (existing?.cover_url) {
+        oldCoverPath = existing.cover_url.replace('/api/files/', '')
+      }
+    }
 
     const { data: track, error: dbError } = await supabase
       .from('music_tracks')
@@ -40,7 +97,14 @@ export default apiHandler(async (req, res) => {
       .single()
 
     if (dbError) {
+      if (newCoverPath) {
+        await deleteFile(newCoverPath).catch(() => {})
+      }
       return error(res, '更新音乐失败')
+    }
+
+    if (oldCoverPath && oldCoverPath !== newCoverPath) {
+      await deleteFile(oldCoverPath).catch(() => {})
     }
 
     return success(res, { track })

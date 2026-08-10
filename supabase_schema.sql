@@ -27,6 +27,7 @@ create table if not exists music_tracks (
   artist text default '',
   audio_url text not null,
   cover_url text,
+  lyrics text default '',
   duration integer default 0,
   created_at timestamp with time zone default now()
 );
@@ -173,5 +174,12 @@ insert into site_settings (key, value) values
   ('social_weibo', ''),
   ('social_instagram', ''),
   ('social_x', ''),
-  ('social_github', '')
+  ('social_github', ''),
+
+  -- 访问统计（总访问量 + 近 7 天每日 JSON）
+  ('visit_count', '0'),
+  ('visit_daily', '{}')
 on conflict (key) do nothing;
+
+-- 已有库升级：为音乐表增加歌词字段（新库建表已包含，可重复执行）
+alter table music_tracks add column if not exists lyrics text default '';

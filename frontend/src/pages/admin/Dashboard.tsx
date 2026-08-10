@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   Image,
@@ -11,6 +11,31 @@ import {
 } from 'lucide-react'
 import { photosApi, musicApi, contactApi } from '@/lib/api'
 import { useSettings } from '@/contexts/SettingsContext'
+
+/** 生成近 7 天日期列表（从旧到新），时区 Asia/Shanghai */
+function getLast7Days(): string[] {
+  const todayStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+  const [y, m, d] = todayStr.split('-').map(Number)
+  const days: string[] = []
+  for (let i = 6; i >= 0; i--) {
+    const dt = new Date(Date.UTC(y, m - 1, d - i))
+    const yy = dt.getUTCFullYear()
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0')
+    const dd = String(dt.getUTCDate()).padStart(2, '0')
+    days.push(`${yy}-${mm}-${dd}`)
+  }
+  return days
+}
+
+function formatDayLabel(dateKey: string) {
+  const [, m, d] = dateKey.split('-')
+  return `${Number(m)}/${Number(d)}`
+}
 
 const AdminDashboard = () => {
   const { settings } = useSettings()
@@ -30,6 +55,19 @@ const AdminDashboard = () => {
       time: string
     }>
   >([])
+
+  const visitSeries = useMemo(() => {
+    const days = getLast7Days()
+    const daily = settings?.visitDaily || {}
+    return days.map((date) => ({
+      date,
+      label: formatDayLabel(date),
+      count: Number(daily[date]) || 0,
+    }))
+  }, [settings?.visitDaily])
+
+  const maxDaily = Math.max(1, ...visitSeries.map((d) => d.count))
+  const weekTotal = visitSeries.reduce((sum, d) => sum + d.count, 0)
 
   useEffect(() => {
     fetchStats()
@@ -136,7 +174,7 @@ const AdminDashboard = () => {
       color: 'from-green-500 to-green-600',
     },
     {
-      label: '访问量',
+      label: '总访问量',
       value: parseInt(settings?.visitCount || '0', 10),
       icon: TrendingUp,
       color: 'from-orange-500 to-orange-600',
@@ -208,6 +246,45 @@ const AdminDashboard = () => {
             )
           })}
         </div>
+      )}
+
+      {/* 近 7 日访问量 */}
+      {!loading && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          className="bg-card/50 rounded-xl border border-white/10 p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-semibold">近 7 日访问量</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                本周合计 {weekTotal} 次（按浏览器自然日去重）
+              </p>
+            </div>
+          </div>
+          <div className="flex items-end gap-2 sm:gap-3 h-40">
+            {visitSeries.map((day, index) => {
+              const heightPct = Math.max((day.count / maxDaily) * 100, day.count > 0 ? 8 : 2)
+              return (
+                <div key={day.date} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                  <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                    {day.count}
+                  </span>
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${heightPct}%` }}
+                    transition={{ duration: 0.45, delay: 0.4 + index * 0.05 }}
+                    className="w-full max-w-[48px] rounded-t-md bg-gradient-to-t from-orange-600 to-orange-400 min-h-[4px]"
+                    title={`${day.date}: ${day.count}`}
+                  />
+                  <span className="text-xs text-muted-foreground">{day.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </motion.div>
       )}
 
       {!loading && (

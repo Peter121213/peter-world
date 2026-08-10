@@ -26,6 +26,7 @@ const Header = () => {
     { name: settings?.navHome || '首页', path: '/' },
     { name: settings?.navAlbum || '相册', path: '/portfolio' },
     { name: settings?.navBlog || '生活随笔', path: '/blog' },
+    { name: '音乐', path: '/music' },
     { name: settings?.navAbout || '关于我', path: '/about' },
     { name: settings?.navContact || '联系我', path: '/contact' },
   ]

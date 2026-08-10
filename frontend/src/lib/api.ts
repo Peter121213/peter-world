@@ -67,6 +67,7 @@ export const photosApi = {
 // 音乐相关 API
 export const musicApi = {
   getAll: () => request<{ tracks: MusicTrack[] }>('/music'),
+  getById: (id: string | number) => request<{ track: any }>(`/music/${id}`),
   upload: async (formData: FormData) => {
     const res = await fetch(`${API_BASE}/music`, {
       method: 'POST',
@@ -84,7 +85,23 @@ export const musicApi = {
     
     return data
   },
-  delete: (id: number) =>
+  update: async (id: string | number, data: { title?: string; artist?: string; lyrics?: string } | FormData) => {
+    const isForm = data instanceof FormData
+    const res = await fetch(`${API_BASE}/music/${id}`, {
+      method: 'PUT',
+      body: isForm ? data : JSON.stringify(data),
+      headers: {
+        ...(isForm ? {} : { 'Content-Type': 'application/json' }),
+        'X-Auth-Token': localStorage.getItem('admin_token') || '',
+      },
+    })
+    const result = await res.json()
+    if (!res.ok) {
+      throw new Error(result.error || '更新失败')
+    }
+    return result
+  },
+  delete: (id: number | string) =>
     request(`/music/${id}`, {
       method: 'DELETE',
       headers: {

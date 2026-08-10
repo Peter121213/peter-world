@@ -9,11 +9,12 @@ export interface Photo {
 }
 
 export interface MusicTrack {
-  id: number
+  id: number | string
   title: string
   artist: string
   audioUrl: string
   coverUrl?: string
+  lyrics?: string
   duration?: number
 }
 
@@ -28,6 +29,8 @@ export interface SiteSettings {
   navContact: string
   footerCopyright: string
   visitCount: string
+  /** 近 7 天每日访问量，key 为 YYYY-MM-DD */
+  visitDaily: Record<string, number>
 
   // 首页 - Hero
   heroBadge: string

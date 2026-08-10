@@ -9,6 +9,7 @@ import MusicPlayer from './components/MusicPlayer'
 import Home from './pages/Home'
 import Portfolio from './pages/Portfolio'
 import Blog from './pages/Blog'
+import MusicPage from './pages/Music'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import AdminLogin from './pages/admin/Login'
@@ -23,17 +24,21 @@ import AdminLayout from './pages/admin/Layout'
 const FrontendLayout = () => {
   const { loading } = useSettings()
 
-  // 统计访问量（24小时内同一个用户只算一次）
+  // 统计访问量（按自然日去重，同一浏览器每天只计一次）
   useEffect(() => {
     const recordVisit = async () => {
       try {
-        const lastVisit = localStorage.getItem('last_visit')
-        const now = Date.now()
-        const ONE_DAY = 24 * 60 * 60 * 1000
+        const today = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Shanghai',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date())
+        const lastVisitDay = localStorage.getItem('last_visit_day')
 
-        if (!lastVisit || now - parseInt(lastVisit, 10) > ONE_DAY) {
+        if (lastVisitDay !== today) {
           await settingsApi.recordVisit()
-          localStorage.setItem('last_visit', String(now))
+          localStorage.setItem('last_visit_day', today)
         }
       } catch (e) {
         // 统计失败不影响用户体验
@@ -57,6 +62,7 @@ const FrontendLayout = () => {
           <Route path="/" element={<Home />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/music" element={<MusicPage />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
         </Routes>

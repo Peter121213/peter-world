@@ -2,6 +2,36 @@ import { supabase } from './_lib/supabase'
 import { requireAuth } from './_lib/auth'
 import { apiHandler, success, error } from './_lib/response'
 
+/** 按 Asia/Shanghai 取当天日期 YYYY-MM-DD */
+function getTodayKey() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
+/** 在日历日期上加减天数（与服务器本地时区无关） */
+function shiftDateKey(dateKey, deltaDays) {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + deltaDays))
+  const yy = dt.getUTCFullYear()
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(dt.getUTCDate()).padStart(2, '0')
+  return `${yy}-${mm}-${dd}`
+}
+
+/** 解析并裁剪近 7 天的每日访问量 */
+function pruneDailyVisits(daily, todayKey) {
+  const kept = {}
+  for (let i = 0; i < 7; i++) {
+    const key = shiftDateKey(todayKey, -i)
+    kept[key] = Number(daily?.[key]) || 0
+  }
+  return kept
+}
+
 // 默认设置
 const defaultSettings = {
   site_name: "Peter 的小世界",
@@ -39,6 +69,20 @@ export default apiHandler(async (req, res) => {
       settings[row.key] = row.value
     })
 
+    // 规范化近 7 天访问量（补齐缺失日期、去掉过期）
+    let dailyRaw = {}
+    try {
+      dailyRaw = settings.visit_daily ? JSON.parse(settings.visit_daily) : {}
+      if (!dailyRaw || typeof dailyRaw !== 'object' || Array.isArray(dailyRaw)) {
+        dailyRaw = {}
+      }
+    } catch {
+      dailyRaw = {}
+    }
+    const daily = pruneDailyVisits(dailyRaw, getTodayKey())
+    settings.visit_daily = daily
+    settings.visit_count = settings.visit_count || '0'
+
     return success(res, { settings })
   }
 
@@ -52,44 +96,63 @@ export default apiHandler(async (req, res) => {
       return error(res, '无效的设置数据', 400)
     }
 
-    // 逐条更新或插入
-    const updates = Object.entries(settings).map(([key, value]) =>
-      supabase
-        .from('site_settings')
-        .upsert({ key, value }, { onConflict: 'key' })
-    )
+    // 逐条更新或插入（禁止通过设置接口改写访问量统计）
+    const protectedKeys = new Set(['visit_count', 'visit_daily'])
+    const updates = Object.entries(settings)
+      .filter(([key]) => !protectedKeys.has(key))
+      .map(([key, value]) =>
+        supabase
+          .from('site_settings')
+          .upsert({ key, value }, { onConflict: 'key' })
+      )
 
     await Promise.all(updates)
 
     return success(res, { message: '设置已更新' })
   }
 
-  // POST - 统计访问量
+  // POST - 统计访问量（总访问量 + 近 7 天每日）
   if (req.method === 'POST') {
     const { action } = req.query
 
     if (action === 'visit') {
-      // 先获取当前访问量
-      const { data: row, error: fetchError } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'visit_count')
-        .single()
+      const todayKey = getTodayKey()
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        // PGRST116 是没找到数据的错误，没关系
+      const { data: rows, error: fetchError } = await supabase
+        .from('site_settings')
+        .select('key, value')
+        .in('key', ['visit_count', 'visit_daily'])
+
+      if (fetchError) {
         return error(res, '统计访问量失败')
       }
 
-      const currentCount = row ? parseInt(row.value || '0', 10) : 0
-      const newCount = currentCount + 1
+      const map = Object.fromEntries((rows || []).map((r) => [r.key, r.value]))
+      const total = (parseInt(map.visit_count || '0', 10) || 0) + 1
 
-      // 更新访问量
-      await supabase
-        .from('site_settings')
-        .upsert({ key: 'visit_count', value: String(newCount) }, { onConflict: 'key' })
+      let dailyRaw = {}
+      try {
+        dailyRaw = map.visit_daily ? JSON.parse(map.visit_daily) : {}
+        if (!dailyRaw || typeof dailyRaw !== 'object' || Array.isArray(dailyRaw)) {
+          dailyRaw = {}
+        }
+      } catch {
+        dailyRaw = {}
+      }
 
-      return success(res, { count: newCount })
+      const daily = pruneDailyVisits(dailyRaw, todayKey)
+      daily[todayKey] = (daily[todayKey] || 0) + 1
+
+      await Promise.all([
+        supabase
+          .from('site_settings')
+          .upsert({ key: 'visit_count', value: String(total) }, { onConflict: 'key' }),
+        supabase
+          .from('site_settings')
+          .upsert({ key: 'visit_daily', value: JSON.stringify(daily) }, { onConflict: 'key' }),
+      ])
+
+      return success(res, { count: total, daily })
     }
 
     return error(res, '无效的操作', 400)

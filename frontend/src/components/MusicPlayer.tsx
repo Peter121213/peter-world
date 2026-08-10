@@ -42,6 +42,7 @@ const MusicPlayer = () => {
           artist: t.artist || 'Peter',
           audioUrl: t.audio_url,
           coverUrl: t.cover_url,
+          lyrics: t.lyrics || '',
           duration: t.duration,
         }))
         setTracks(formattedTracks)
@@ -103,9 +104,23 @@ const MusicPlayer = () => {
     const handleToggleMusic = () => {
       setIsOpen((prev) => !prev)
     }
+    const handlePlayTrack = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (!detail?.id || tracks.length === 0) return
+      const index = tracks.findIndex((t) => String(t.id) === String(detail.id))
+      if (index < 0) return
+      setCurrentIndex(index)
+      setIsOpen(true)
+      setIsPlaying(true)
+      setTimeout(() => audioRef.current?.play().catch(() => {}), 100)
+    }
     window.addEventListener('toggleMusic', handleToggleMusic)
-    return () => window.removeEventListener('toggleMusic', handleToggleMusic)
-  }, [])
+    window.addEventListener('playTrack', handlePlayTrack)
+    return () => {
+      window.removeEventListener('toggleMusic', handleToggleMusic)
+      window.removeEventListener('playTrack', handlePlayTrack)
+    }
+  }, [tracks])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -212,8 +227,16 @@ const MusicPlayer = () => {
         {/* 封面和信息 */}
         <div className="p-6 pb-4">
           <div className="flex items-center space-x-4 mb-4">
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
-              <Music className="w-8 h-8 text-primary" />
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {currentTrack?.coverUrl ? (
+                <img
+                  src={currentTrack.coverUrl}
+                  alt={currentTrack.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Music className="w-8 h-8 text-primary" />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold truncate">{currentTrack?.title || '暂无音乐'}</h4>
