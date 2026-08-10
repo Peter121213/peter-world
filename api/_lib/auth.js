@@ -2,52 +2,66 @@ import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'peter-world-secret-key-2024'
 
-// 验证 JWT token
-export function verifyAuth(req) {
-  // 从 cookie 读取 token（避免 VPN/代理软件替换请求头）
-  let token = null
-  
-  // 先尝试从 cookie 读取
-  if (req.headers.cookie) {
-    const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split('=')
-      acc[key] = value
-      return acc
-    }, {})
-    token = cookies.peter_world_token
-  }
-  
-  // 如果 cookie 里没有，再尝试从 X-Auth-Token 头读取（兼容旧版本）
-  if (!token) {
-    token = req.headers['x-auth-token'] || req.headers['X-Auth-Token']
-  }
+/** 解析 Cookie，只按第一个 = 分割，避免 JWT 中的 = 被截断 */
+function parseCookies(cookieHeader) {
+  const cookies = {}
+  if (!cookieHeader) return cookies
 
-  console.log('Token source:', req.headers.cookie ? 'cookie' : 'header')
-  console.log('Token exists:', !!token)
-  console.log('Token length:', token ? token.length : 0)
-
-  if (!token) {
-    console.log('No token found')
-    return null
+  for (const part of cookieHeader.split(';')) {
+    const trimmed = part.trim()
+    if (!trimmed) continue
+    const eq = trimmed.indexOf('=')
+    if (eq === -1) continue
+    const key = trimmed.slice(0, eq).trim()
+    const value = trimmed.slice(eq + 1).trim()
+    try {
+      cookies[key] = decodeURIComponent(value)
+    } catch {
+      cookies[key] = value
+    }
   }
+  return cookies
+}
 
-  // 清理 token：去掉所有空白字符（换行、空格等）
+function tryVerify(token) {
+  if (!token || typeof token !== 'string') return null
   const cleanToken = token.replace(/\s/g, '')
-  
-  console.log('Clean token length:', cleanToken.length)
-  console.log('Token dots count:', (cleanToken.match(/\./g) || []).length)
-  console.log('Token start:', cleanToken.substring(0, 10))
-  console.log('Token end:', cleanToken.substring(cleanToken.length - 10))
-
+  if (!cleanToken) return null
   try {
-    const decoded = jwt.verify(cleanToken, JWT_SECRET)
-    console.log('Token verified successfully:', decoded.username)
-    return decoded
-  } catch (error) {
-    console.log('Token verify failed:', error.message)
-    console.log('Error name:', error.name)
+    return jwt.verify(cleanToken, JWT_SECRET)
+  } catch {
     return null
   }
+}
+
+// 验证 JWT token（cookie 与请求头都尝试，任一有效即可）
+export function verifyAuth(req) {
+  const candidates = []
+
+  const cookies = parseCookies(req.headers.cookie)
+  if (cookies.peter_world_token) {
+    candidates.push(cookies.peter_world_token)
+  }
+
+  const headerToken =
+    req.headers['x-auth-token'] ||
+    req.headers['X-Auth-Token'] ||
+    (req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.slice(7)
+      : null)
+
+  if (headerToken) {
+    candidates.push(headerToken)
+  }
+
+  for (const token of candidates) {
+    const decoded = tryVerify(token)
+    if (decoded) {
+      return decoded
+    }
+  }
+
+  return null
 }
 
 // 生成 JWT token

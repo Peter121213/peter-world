@@ -15,7 +15,10 @@ export function apiHandler(handler) {
       // 设置 CORS 头
       res.setHeader('Access-Control-Allow-Origin', '*')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      res.setHeader(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization, X-Auth-Token'
+      )
 
       // 处理 OPTIONS 预检请求
       if (req.method === 'OPTIONS') {

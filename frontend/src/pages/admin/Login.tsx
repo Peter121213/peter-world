@@ -27,10 +27,10 @@ const AdminLogin = () => {
         // 同时存在 localStorage 和 cookie 里
         localStorage.setItem('admin_token', res.token)
         
-        // 设置 cookie（7 天过期）
+        // 设置 cookie（7 天过期）；encode 避免特殊字符破坏解析
         const days = 7
         const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString()
-        document.cookie = `peter_world_token=${res.token}; expires=${expires}; path=/; SameSite=Lax`
+        document.cookie = `peter_world_token=${encodeURIComponent(res.token)}; expires=${expires}; path=/; SameSite=Lax`
         
         navigate(from, { replace: true })
       } else {

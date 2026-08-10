@@ -87,12 +87,14 @@ export const musicApi = {
   },
   update: async (id: string | number, data: { title?: string; artist?: string; lyrics?: string } | FormData) => {
     const isForm = data instanceof FormData
+    const token = localStorage.getItem('admin_token') || ''
     const res = await fetch(`${API_BASE}/music/${id}`, {
       method: 'PUT',
       body: isForm ? data : JSON.stringify(data),
       headers: {
         ...(isForm ? {} : { 'Content-Type': 'application/json' }),
-        'X-Auth-Token': localStorage.getItem('admin_token') || '',
+        'X-Auth-Token': token,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     })
     const result = await res.json()
