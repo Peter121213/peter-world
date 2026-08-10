@@ -113,18 +113,24 @@ export const musicApi = {
     id: string | number,
     data: { title?: string; artist?: string; lyrics?: string } | FormData
   ) => {
-    const isForm = data instanceof FormData
     const token = getToken()
-    if (isForm && token) {
-      data.append('token', token)
+    const formData = data instanceof FormData ? data : new FormData()
+
+    if (!(data instanceof FormData)) {
+      if (data.title != null) formData.append('title', data.title)
+      if (data.artist != null) formData.append('artist', data.artist)
+      if (data.lyrics != null) formData.append('lyrics', data.lyrics)
     }
 
-    // 直接打到 /music?id=，避免走 detail 重写
-    const path = withAuthQuery(`/music?id=${encodeURIComponent(String(id))}`)
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'PUT',
-      body: isForm ? data : JSON.stringify({ ...(data as object), token }),
-      headers: authHeaders(isForm ? {} : { 'Content-Type': 'application/json' }),
+    formData.append('action', 'update')
+    formData.append('id', String(id))
+    if (token) formData.append('token', token)
+
+    // 与「上传新歌」同一条 POST 通道（已验证可鉴权）
+    const res = await fetch(`${API_BASE}${withAuthQuery('/music')}`, {
+      method: 'POST',
+      body: formData,
+      headers: authHeaders(),
     })
     const result = await res.json()
     if (!res.ok) {

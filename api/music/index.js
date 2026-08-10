@@ -18,7 +18,7 @@ async function readRawBody(req) {
   return body
 }
 
-async function updateTrackById(req, res, id, fields, files) {
+async function updateTrackById(res, id, fields, files) {
   const updateData = {}
   let newCoverPath = null
 
@@ -31,13 +31,17 @@ async function updateTrackById(req, res, id, fields, files) {
 
   if (files?.cover?.[0]) {
     const coverFile = files.cover[0]
-    const coverExt = coverFile.originalFilename.split('.').pop()
-    const coverName = `music/covers/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${coverExt}`
+    const coverExt = (coverFile.originalFilename || 'cover.jpg').split('.').pop()
+    const coverName = `music/covers/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${coverExt}`
     const fs = await import('fs')
     const coverBuffer = fs.readFileSync(coverFile.filepath)
-    await uploadFile(coverName, coverBuffer, coverFile.mimetype)
+    await uploadFile(coverName, coverBuffer, coverFile.mimetype || 'image/jpeg')
     updateData.cover_url = `/api/files/${coverName}`
     newCoverPath = coverName
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return error(res, '没有可更新的内容', 400)
   }
 
   let oldCoverPath = null
@@ -60,10 +64,11 @@ async function updateTrackById(req, res, id, fields, files) {
     .single()
 
   if (dbError) {
+    console.error('更新音乐数据库失败:', dbError)
     if (newCoverPath) {
       await deleteFile(newCoverPath).catch(() => {})
     }
-    return error(res, '更新音乐失败')
+    return error(res, '更新音乐失败: ' + (dbError.message || '数据库错误'))
   }
 
   if (oldCoverPath && oldCoverPath !== newCoverPath) {
@@ -76,7 +81,7 @@ async function updateTrackById(req, res, id, fields, files) {
 export default apiHandler(async (req, res) => {
   const id = Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id
 
-  // GET - 单首或列表
+  // GET - 公开：单首或列表（不需要登录）
   if (req.method === 'GET') {
     if (id) {
       const { data: track, error: dbError } = await supabase
@@ -97,25 +102,51 @@ export default apiHandler(async (req, res) => {
       .order('sort_order', { ascending: true })
 
     if (dbError) {
-      return error(res, '获取音乐列表失败')
+      // sort_order 不存在时降级
+      const fallback = await supabase
+        .from('music_tracks')
+        .select('*')
+        .order('created_at', { ascending: true })
+      if (fallback.error) {
+        return error(res, '获取音乐列表失败')
+      }
+      return success(res, { tracks: fallback.data })
     }
 
     return success(res, { tracks })
   }
 
-  // POST - 上传音乐
+  // POST - 新建 或 更新（更新也走 POST，避免 Vercel 对 PUT+multipart 支持不佳）
   if (req.method === 'POST') {
-    requireAuth(req)
-
     const form = formidable({
       maxFileSize: 20 * 1024 * 1024,
+      multiples: false,
     })
 
-    const [fields, files] = await form.parse(req)
+    let fields
+    let files
+    try {
+      ;[fields, files] = await form.parse(req)
+    } catch (parseErr) {
+      console.error('解析表单失败:', parseErr)
+      return error(res, '上传内容解析失败，请压缩封面后重试', 400)
+    }
 
+    // 鉴权：query / header / 表单字段均可
+    requireAuth(req, fields.token?.[0])
+
+    const action = fields.action?.[0]
+    const updateId = fields.id?.[0] || (action === 'update' ? id : null)
+
+    // —— 更新已有歌曲（封面 / 歌词，不需要音频）——
+    if (updateId) {
+      return updateTrackById(res, updateId, fields, files)
+    }
+
+    // —— 新建歌曲 ——
     const title = fields.title?.[0]
     const artist = fields.artist?.[0] || 'Peter'
-    const duration = parseInt(fields.duration?.[0]) || 0
+    const duration = parseInt(fields.duration?.[0], 10) || 0
     const lyrics = fields.lyrics?.[0] || ''
 
     if (!title) {
@@ -127,24 +158,21 @@ export default apiHandler(async (req, res) => {
     }
 
     const audioFile = files.audio[0]
-    const fileExt = audioFile.originalFilename.split('.').pop()
-    const fileName = `music/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`
+    const fileExt = (audioFile.originalFilename || 'audio.mp3').split('.').pop()
+    const fileName = `music/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`
 
     const fs = await import('fs')
     const fileBuffer = fs.readFileSync(audioFile.filepath)
-
-    await uploadFile(fileName, fileBuffer, audioFile.mimetype)
-
+    await uploadFile(fileName, fileBuffer, audioFile.mimetype || 'audio/mpeg')
     const audioUrl = `/api/files/${fileName}`
 
     let coverUrl = null
     if (files.cover && files.cover[0]) {
       const coverFile = files.cover[0]
-      const coverExt = coverFile.originalFilename.split('.').pop()
-      const coverName = `music/covers/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${coverExt}`
-
+      const coverExt = (coverFile.originalFilename || 'cover.jpg').split('.').pop()
+      const coverName = `music/covers/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${coverExt}`
       const coverBuffer = fs.readFileSync(coverFile.filepath)
-      await uploadFile(coverName, coverBuffer, coverFile.mimetype)
+      await uploadFile(coverName, coverBuffer, coverFile.mimetype || 'image/jpeg')
       coverUrl = `/api/files/${coverName}`
     }
 
@@ -162,51 +190,19 @@ export default apiHandler(async (req, res) => {
       .single()
 
     if (dbError) {
+      console.error('保存音乐失败:', dbError)
       await deleteFile(fileName).catch(() => {})
       if (coverUrl) {
-        const coverPath = coverUrl.replace('/api/files/', '')
-        await deleteFile(coverPath).catch(() => {})
+        await deleteFile(coverUrl.replace('/api/files/', '')).catch(() => {})
       }
-      return error(res, '保存音乐失败')
+      return error(res, '保存音乐失败: ' + (dbError.message || '请确认已添加 lyrics 字段'))
     }
 
     return success(res, { track }, 201)
   }
 
-  // PUT - 有 id 则更新单首；否则批量排序
+  // PUT - 仅批量排序（JSON）
   if (req.method === 'PUT') {
-    const contentType = req.headers['content-type'] || ''
-
-    if (id) {
-      // 单首更新：先解析 body，再用 query/header/form token 鉴权
-      if (contentType.includes('multipart/form-data')) {
-        const form = formidable({
-          maxFileSize: 10 * 1024 * 1024,
-        })
-        const [fields, files] = await form.parse(req)
-        requireAuth(req, fields.token?.[0])
-        return updateTrackById(req, res, id, fields, files)
-      }
-
-      const raw = await readRawBody(req)
-      let body = {}
-      try {
-        body = JSON.parse(raw || '{}')
-      } catch {
-        return error(res, '无效的请求数据', 400)
-      }
-      requireAuth(req, body.token)
-
-      const fields = {
-        title: body.title !== undefined ? [body.title] : undefined,
-        artist: body.artist !== undefined ? [body.artist] : undefined,
-        lyrics: body.lyrics !== undefined ? [body.lyrics] : undefined,
-        duration: body.duration !== undefined ? [String(body.duration)] : undefined,
-      }
-      return updateTrackById(req, res, id, fields, null)
-    }
-
-    // 批量排序
     const raw = await readRawBody(req)
     let parsed = {}
     try {
@@ -221,19 +217,19 @@ export default apiHandler(async (req, res) => {
       return error(res, '请提供音乐排序数组', 400)
     }
 
-    const updates = tracks.map((track, index) =>
-      supabase
-        .from('music_tracks')
-        .update({ sort_order: index })
-        .eq('id', track.id)
+    await Promise.all(
+      tracks.map((track, index) =>
+        supabase
+          .from('music_tracks')
+          .update({ sort_order: index })
+          .eq('id', track.id)
+      )
     )
-
-    await Promise.all(updates)
 
     return success(res, { message: '排序更新成功' })
   }
 
-  // DELETE - 删除单首
+  // DELETE
   if (req.method === 'DELETE') {
     requireAuth(req)
 
@@ -251,14 +247,10 @@ export default apiHandler(async (req, res) => {
       return error(res, '音乐不存在', 404)
     }
 
-    const audioPath = track.audio_url.replace('/api/files/', '')
-    await deleteFile(audioPath).catch(() => {})
-
+    await deleteFile(track.audio_url.replace('/api/files/', '')).catch(() => {})
     if (track.cover_url) {
-      const coverPath = track.cover_url.replace('/api/files/', '')
-      await deleteFile(coverPath).catch(() => {})
+      await deleteFile(track.cover_url.replace('/api/files/', '')).catch(() => {})
     }
-
     await supabase.from('music_tracks').delete().eq('id', id)
 
     return success(res, { message: '音乐已删除' })

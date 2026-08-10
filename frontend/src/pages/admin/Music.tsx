@@ -264,9 +264,9 @@ const AdminMusic = () => {
       setIsEditModalOpen(false)
       setEditingTrack(null)
       setEditCover(null)
-    } catch (error) {
+    } catch (error: any) {
       console.error('更新音乐失败:', error)
-      alert('更新失败，请重试')
+      alert(error?.message || '更新失败，请重试')
     } finally {
       setIsSaving(false)
     }
