@@ -25,6 +25,7 @@ const MusicPlayer = () => {
   const [loading, setLoading] = useState(true)
   const [hasAutoPlayed, setHasAutoPlayed] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const playIntentRef = useRef(false)
 
   useEffect(() => {
     fetchTracks()
@@ -35,7 +36,6 @@ const MusicPlayer = () => {
       setLoading(true)
       const res = await musicApi.getAll()
       if (res.tracks && res.tracks.length > 0) {
-        // 转换字段名
         const formattedTracks = res.tracks.map((t: any) => ({
           id: t.id,
           title: t.title,
@@ -47,7 +47,6 @@ const MusicPlayer = () => {
         }))
         setTracks(formattedTracks)
       } else {
-        // 没有音乐
         setTracks([])
       }
     } catch (error) {
@@ -58,47 +57,96 @@ const MusicPlayer = () => {
     }
   }
 
-  // 音乐列表加载完成后尝试自动播放第一首
+  const currentTrack = tracks[currentIndex]
+
+  // 切歌时正确加载音源，再按意图播放
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio || !currentTrack?.audioUrl) return
+
+    const nextSrc = currentTrack.audioUrl
+    const absolute = new URL(nextSrc, window.location.origin).href
+    const needReload = audio.src !== absolute
+
+    if (needReload) {
+      audio.src = nextSrc
+      audio.load()
+      setCurrentTime(0)
+      setDuration(0)
+    }
+
+    if (playIntentRef.current || isPlaying) {
+      const tryPlay = () => {
+        audio
+          .play()
+          .then(() => {
+            setIsPlaying(true)
+            playIntentRef.current = true
+          })
+          .catch((err) => {
+            console.warn('播放失败:', err)
+            setIsPlaying(false)
+            playIntentRef.current = false
+          })
+      }
+
+      if (needReload) {
+        const onCanPlay = () => {
+          audio.removeEventListener('canplay', onCanPlay)
+          tryPlay()
+        }
+        audio.addEventListener('canplay', onCanPlay)
+        // 兜底：部分浏览器已缓存时可直接播
+        setTimeout(tryPlay, 150)
+        return () => audio.removeEventListener('canplay', onCanPlay)
+      }
+
+      tryPlay()
+    }
+  }, [currentIndex, currentTrack?.audioUrl])
+
+  // 自动播放（可能被浏览器拦截）
   useEffect(() => {
     if (loading || tracks.length === 0 || hasAutoPlayed) return
-    if (!audioRef.current) return
+    if (!audioRef.current || !currentTrack?.audioUrl) return
 
-    // 先尝试直接自动播放（浏览器可能会阻止）
-    const playPromise = audioRef.current.play()
-    
+    playIntentRef.current = true
+    const audio = audioRef.current
+    if (!audio.src) {
+      audio.src = currentTrack.audioUrl
+      audio.load()
+    }
+
+    const playPromise = audio.play()
     if (playPromise !== undefined) {
       playPromise
         .then(() => {
           setIsPlaying(true)
           setHasAutoPlayed(true)
-          console.log('自动播放成功')
         })
         .catch(() => {
-          console.log('自动播放被浏览器阻止，等待用户交互后再试')
-          // 自动播放失败，监听用户第一次交互后自动播放
           const handleFirstInteraction = () => {
             if (!audioRef.current) return
-            audioRef.current.play()
-              .then(() => {
-                setIsPlaying(true)
-                console.log('用户交互后自动播放成功')
-              })
+            playIntentRef.current = true
+            audioRef.current
+              .play()
+              .then(() => setIsPlaying(true))
               .catch(() => {
-                console.log('用户交互后播放还是失败')
+                setIsPlaying(false)
+                playIntentRef.current = false
               })
             setHasAutoPlayed(true)
-            // 移除监听器，只执行一次
             document.removeEventListener('click', handleFirstInteraction)
             document.removeEventListener('keydown', handleFirstInteraction)
             document.removeEventListener('touchstart', handleFirstInteraction)
           }
-          
+
           document.addEventListener('click', handleFirstInteraction)
           document.addEventListener('keydown', handleFirstInteraction)
           document.addEventListener('touchstart', handleFirstInteraction)
         })
     }
-  }, [loading, tracks, hasAutoPlayed])
+  }, [loading, tracks, hasAutoPlayed, currentTrack?.audioUrl])
 
   useEffect(() => {
     const handleToggleMusic = () => {
@@ -109,10 +157,10 @@ const MusicPlayer = () => {
       if (!detail?.id || tracks.length === 0) return
       const index = tracks.findIndex((t) => String(t.id) === String(detail.id))
       if (index < 0) return
+      playIntentRef.current = true
       setCurrentIndex(index)
       setIsOpen(true)
       setIsPlaying(true)
-      setTimeout(() => audioRef.current?.play().catch(() => {}), 100)
     }
     window.addEventListener('toggleMusic', handleToggleMusic)
     window.addEventListener('playTrack', handlePlayTrack)
@@ -143,16 +191,37 @@ const MusicPlayer = () => {
         )
       }
     }
-    const handleLoadedMetadata = () => setDuration(audio.duration)
-    const handleEnded = () => handleNext()
-    const handlePlay = () => setIsPlaying(true)
-    const handlePause = () => setIsPlaying(false)
+    const handleLoadedMetadata = () => {
+      if (!Number.isNaN(audio.duration)) setDuration(audio.duration)
+    }
+    const handleEnded = () => {
+      setCurrentIndex((prev) => {
+        const next = prev === tracks.length - 1 ? 0 : prev + 1
+        playIntentRef.current = true
+        return next
+      })
+      setIsPlaying(true)
+    }
+    const handlePlay = () => {
+      setIsPlaying(true)
+      playIntentRef.current = true
+    }
+    const handlePause = () => {
+      // 仅在用户/逻辑真正暂停时同步；切歌过程中的短暂 pause 忽略
+      if (!playIntentRef.current) setIsPlaying(false)
+    }
+    const handleError = () => {
+      console.error('音频加载错误', audio.error)
+      setIsPlaying(false)
+      playIntentRef.current = false
+    }
 
     audio.addEventListener('timeupdate', handleTimeUpdate)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
     audio.addEventListener('ended', handleEnded)
     audio.addEventListener('play', handlePlay)
     audio.addEventListener('pause', handlePause)
+    audio.addEventListener('error', handleError)
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
@@ -160,6 +229,7 @@ const MusicPlayer = () => {
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('play', handlePlay)
       audio.removeEventListener('pause', handlePause)
+      audio.removeEventListener('error', handleError)
     }
   }, [currentIndex, tracks])
 
@@ -167,25 +237,28 @@ const MusicPlayer = () => {
     const handleSeek = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!audioRef.current || detail?.time == null) return
+      playIntentRef.current = true
+
       if (detail.id != null) {
         const index = tracks.findIndex((t) => String(t.id) === String(detail.id))
         if (index >= 0 && index !== currentIndex) {
           setCurrentIndex(index)
+          setIsPlaying(true)
+          setIsOpen(true)
+          // 等切歌 effect 加载后再 seek
           setTimeout(() => {
             if (!audioRef.current) return
             audioRef.current.currentTime = detail.time
             audioRef.current.play().catch(() => {})
-            setIsPlaying(true)
-            setIsOpen(true)
-          }, 120)
+          }, 250)
           return
         }
       }
+
       audioRef.current.currentTime = detail.time
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(() => {})
-        setIsPlaying(true)
-      }
+      audioRef.current.play().catch(() => {})
+      setIsPlaying(true)
+      setIsOpen(true)
     }
     window.addEventListener('seekMusic', handleSeek)
     return () => window.removeEventListener('seekMusic', handleSeek)
@@ -198,25 +271,31 @@ const MusicPlayer = () => {
   }, [volume, isMuted])
 
   const togglePlay = () => {
-    if (!audioRef.current) return
-    if (isPlaying) {
-      audioRef.current.pause()
+    const audio = audioRef.current
+    if (!audio) return
+    if (!audio.paused) {
+      playIntentRef.current = false
+      audio.pause()
+      setIsPlaying(false)
     } else {
-      audioRef.current.play()
+      playIntentRef.current = true
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false))
     }
-    setIsPlaying(!isPlaying)
   }
 
   const handlePrevious = () => {
-    setCurrentIndex((prev) => (prev === 0 ? tracks.length - 1 : prev - 1))
+    playIntentRef.current = true
     setIsPlaying(true)
-    setTimeout(() => audioRef.current?.play(), 100)
+    setCurrentIndex((prev) => (prev === 0 ? tracks.length - 1 : prev - 1))
   }
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev === tracks.length - 1 ? 0 : prev + 1))
+    playIntentRef.current = true
     setIsPlaying(true)
-    setTimeout(() => audioRef.current?.play(), 100)
+    setCurrentIndex((prev) => (prev === tracks.length - 1 ? 0 : prev + 1))
   }
 
   const formatTime = (time: number) => {
@@ -233,16 +312,12 @@ const MusicPlayer = () => {
     audioRef.current.currentTime = percent * duration
   }
 
-  const currentTrack = tracks[currentIndex]
-
-  // 没有音乐时不显示播放器
   if (!loading && tracks.length === 0) {
     return null
   }
 
   return (
     <>
-      {/* 音乐按钮（收起状态） */}
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
@@ -254,7 +329,6 @@ const MusicPlayer = () => {
         <Music className={cn('w-6 h-6', isPlaying && 'animate-pulse')} />
       </button>
 
-      {/* 音乐播放器（展开状态） */}
       <div
         className={cn(
           'fixed bottom-6 right-6 z-40 w-80 glassmorphism rounded-2xl shadow-2xl transition-all duration-300 transform',
@@ -263,9 +337,8 @@ const MusicPlayer = () => {
             : 'translate-y-full opacity-0 pointer-events-none'
         )}
       >
-        <audio ref={audioRef} src={currentTrack?.audioUrl} preload="auto" />
+        <audio ref={audioRef} preload="auto" />
 
-        {/* 关闭按钮 */}
         <button
           onClick={() => setIsOpen(false)}
           className="absolute top-3 right-3 p-1 rounded-full hover:bg-white/10 transition-colors"
@@ -274,7 +347,6 @@ const MusicPlayer = () => {
           <X className="w-4 h-4" />
         </button>
 
-        {/* 封面和信息 */}
         <div className="p-6 pb-4">
           <div className="flex items-center space-x-4 mb-4">
             <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -296,7 +368,6 @@ const MusicPlayer = () => {
             </div>
           </div>
 
-          {/* 进度条 */}
           <div
             className="h-1 bg-white/10 rounded-full cursor-pointer mb-2"
             onClick={handleProgressClick}
@@ -312,7 +383,6 @@ const MusicPlayer = () => {
           </div>
         </div>
 
-        {/* 控制按钮 */}
         <div className="px-6 pb-4 flex items-center justify-center space-x-6">
           <button
             onClick={handlePrevious}
@@ -341,18 +411,13 @@ const MusicPlayer = () => {
           </button>
         </div>
 
-        {/* 音量控制 */}
         <div className="px-6 pb-4 flex items-center space-x-3">
           <button
             onClick={() => setIsMuted(!isMuted)}
             className="p-1 hover:text-primary transition-colors"
             aria-label={isMuted ? '取消静音' : '静音'}
           >
-            {isMuted ? (
-              <VolumeX className="w-4 h-4" />
-            ) : (
-              <Volume2 className="w-4 h-4" />
-            )}
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
           <input
             type="range"

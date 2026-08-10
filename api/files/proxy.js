@@ -4,12 +4,23 @@ import { apiHandler, error } from '../_lib/response'
 
 export const config = {
   api: {
-    responseLimit: false, // 不限制响应大小（用于大文件）
+    responseLimit: false,
   },
 }
 
+function parseRange(rangeHeader, size) {
+  if (!rangeHeader || !rangeHeader.startsWith('bytes=')) return null
+  const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-')
+  let start = parseInt(startStr, 10)
+  let end = endStr ? parseInt(endStr, 10) : size - 1
+  if (Number.isNaN(start)) start = 0
+  if (Number.isNaN(end) || end >= size) end = size - 1
+  if (start < 0 || start > end || start >= size) return null
+  return { start, end }
+}
+
 export default apiHandler(async (req, res) => {
-  if (req.method !== 'GET') {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
     return error(res, '方法不允许', 405)
   }
 
@@ -21,29 +32,73 @@ export default apiHandler(async (req, res) => {
   }
 
   try {
-    const command = new GetObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: key,
-    })
+    // 先取元数据，支持 Range（音频播放器依赖）
+    const head = await r2Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+        Range: 'bytes=0-0',
+      })
+    )
 
-    const response = await r2Client.send(command)
+    // Content-Range: bytes 0-0/12345
+    const totalMatch = String(head.ContentRange || '').match(/\/(\d+)$/)
+    const totalSize = totalMatch
+      ? parseInt(totalMatch[1], 10)
+      : Number(head.ContentLength || 0)
 
-    // 设置 Content-Type
-    if (response.ContentType) {
-      res.setHeader('Content-Type', response.ContentType)
+    const contentType = head.ContentType || 'application/octet-stream'
+    res.setHeader('Content-Type', contentType)
+    res.setHeader('Accept-Ranges', 'bytes')
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length')
+
+    if (req.method === 'HEAD') {
+      if (totalSize) res.setHeader('Content-Length', String(totalSize))
+      return res.status(200).end()
     }
 
-    // 设置缓存
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    const range = parseRange(req.headers.range, totalSize)
 
-    // 把文件流传给客户端
+    if (range && totalSize > 0) {
+      const { start, end } = range
+      const chunkSize = end - start + 1
+      const obj = await r2Client.send(
+        new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: key,
+          Range: `bytes=${start}-${end}`,
+        })
+      )
+
+      res.statusCode = 206
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${totalSize}`)
+      res.setHeader('Content-Length', String(chunkSize))
+
+      const chunks = []
+      for await (const chunk of obj.Body) {
+        chunks.push(chunk)
+      }
+      return res.end(Buffer.concat(chunks))
+    }
+
+    // 完整文件
+    const obj = await r2Client.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+      })
+    )
+
+    if (totalSize) {
+      res.setHeader('Content-Length', String(totalSize))
+    }
+
     const chunks = []
-    for await (const chunk of response.Body) {
+    for await (const chunk of obj.Body) {
       chunks.push(chunk)
     }
-    const buffer = Buffer.concat(chunks)
-
-    res.status(200).send(buffer)
+    return res.status(200).end(Buffer.concat(chunks))
   } catch (err) {
     if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
       return error(res, '文件不存在', 404)
