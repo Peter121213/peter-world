@@ -95,12 +95,44 @@ function getClientIp(req) {
   )
 }
 
-/** Vercel 地理头：国家 / 地区 / 城市 */
+/** 地理信息：优先用 Cloudflare 的真实访客国家，再用 Vercel 的 */
 function getGeoFromRequest(req) {
+  // Cloudflare 只传国家码（cf-ipcountry），地区/城市默认不传
+  // Vercel 的地理头是基于 Cloudflare 节点 IP 解析的，不准，仅作兜底
+  const cfCountry = String(req.headers['cf-ipcountry'] || '').toUpperCase()
+  const vercelCountry = String(req.headers['x-vercel-ip-country'] || '').toUpperCase()
+
   return {
-    country: String(req.headers['x-vercel-ip-country'] || req.headers['cf-ipcountry'] || '').toUpperCase(),
-    region: decodeHeader(req.headers['x-vercel-ip-country-region'] || ''),
-    city: decodeHeader(req.headers['x-vercel-ip-city'] || ''),
+    // 优先用 Cloudflare 的真实访客国家；XX 表示未知
+    country: cfCountry && cfCountry !== 'XX' ? cfCountry : (vercelCountry || ''),
+    // Cloudflare 默认不传地区和城市，这里留空（避免显示 Cloudflare 节点的假位置）
+    region: '',
+    city: '',
+  }
+}
+
+/** 用 ip-api.com 查询 IP 详细地理信息（免费版，每分钟 45 次） */
+async function queryIpGeo(ip) {
+  if (!ip || ip === 'unknown' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('127.')) {
+    return null
+  }
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 3000) // 3秒超时
+    const res = await fetch(`http://ip-api.com/json/${ip}?lang=zh-CN&fields=status,country,regionName,city`, {
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data.status !== 'success') return null
+    return {
+      country: data.country || '',
+      region: data.regionName || '',
+      city: data.city || '',
+    }
+  } catch {
+    return null
   }
 }
 
@@ -231,7 +263,15 @@ export default apiHandler(async (req, res) => {
     if (action === 'visit') {
       const todayKey = getTodayKey()
       const ip = getClientIp(req)
-      const geo = getGeoFromRequest(req)
+      let geo = getGeoFromRequest(req)
+
+      // 用 ip-api.com 查询详细地域（省份、城市），失败则用 Cloudflare 的国家信息兜底
+      if (ip && ip !== 'unknown') {
+        const detailedGeo = await queryIpGeo(ip)
+        if (detailedGeo) {
+          geo = detailedGeo
+        }
+      }
 
       const { data: rows, error: fetchError } = await supabase
         .from('site_settings')
