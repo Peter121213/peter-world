@@ -93,11 +93,13 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true)
 
   const [visitors, setVisitors] = useState<{
+    days: Record<string, Array<{ ip: string; country?: string; region?: string; city?: string; at?: string }>>
     visitors: Array<{ ip: string; country?: string; region?: string; city?: string; at?: string; date?: string }>
     distribution: Array<{ label: string; count: number }>
     uniqueIps: number
-  }>({ visitors: [], distribution: [], uniqueIps: 0 })
+  }>({ days: {}, visitors: [], distribution: [], uniqueIps: 0 })
   const [visitorsLoading, setVisitorsLoading] = useState(true)
+  const [selectedDay, setSelectedDay] = useState<string>('')
 
   const [recentActivity, setRecentActivity] = useState<
     Array<{
@@ -139,6 +141,8 @@ const AdminDashboard = () => {
 
       if (visitorsRes) {
         setVisitors(visitorsRes)
+        const days = getLast7Days()
+        setSelectedDay(days[days.length - 1]) // 默认选中今天
       }
       setVisitorsLoading(false)
 
@@ -403,54 +407,90 @@ const AdminDashboard = () => {
             )}
           </motion.div>
 
-          {/* 最近访客 */}
+          {/* 近 7 日访客 IP（按天分组） */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.45 }}
             className="bg-card/50 rounded-xl border border-white/10 p-6"
           >
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-2 mb-4">
               <Users className="w-5 h-5 text-accent" />
-              <h2 className="text-lg font-semibold">最近访客</h2>
+              <h2 className="text-lg font-semibold">近 7 日访客 IP</h2>
               <span className="text-xs text-muted-foreground ml-auto">
-                共 {visitors.visitors.length} 条记录
+                独立 IP {visitors.uniqueIps} 个
               </span>
             </div>
+
             {visitorsLoading ? (
               <div className="text-center py-10">
                 <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto" />
               </div>
-            ) : visitors.visitors.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                暂无访客记录
-              </div>
             ) : (
-              <div className="space-y-2 max-h-[320px] overflow-y-auto pr-2">
-                {visitors.visitors.slice(0, 30).map((visitor, index) => (
-                  <div
-                    key={`${visitor.ip}-${visitor.at}-${index}`}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <Globe className="w-4 h-4 text-primary" />
+              <>
+                {/* 日期标签页 */}
+                <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
+                  {getLast7Days().map((date) => {
+                    const dayList = visitors.days?.[date] || []
+                    const isActive = selectedDay === date
+                    return (
+                      <button
+                        key={date}
+                        onClick={() => setSelectedDay(date)}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          isActive
+                            ? 'bg-accent text-background'
+                            : 'bg-white/5 text-muted-foreground hover:bg-white/10'
+                        }`}
+                      >
+                        {formatDayLabel(date)}
+                        <span className={`ml-1.5 ${isActive ? 'opacity-80' : ''}`}>
+                          {dayList.length}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* 当天访客列表 */}
+                {(() => {
+                  const dayList = visitors.days?.[selectedDay] || []
+                  if (dayList.length === 0) {
+                    return (
+                      <div className="text-center py-10 text-muted-foreground">
+                        当天暂无访客记录
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2">
+                      {dayList.map((visitor, index) => (
+                        <div
+                          key={`${visitor.ip}-${visitor.at}-${index}`}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                            <Globe className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-mono truncate">{visitor.ip}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {formatRegionLabel(
+                                [visitor.country, visitor.region, visitor.city]
+                                  .filter(Boolean)
+                                  .join(' · ') || '未知地区'
+                              )}
+                            </p>
+                          </div>
+                          <span className="text-xs text-muted-foreground flex-shrink-0">
+                            {formatVisitTime(visitor.at)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-mono truncate">{visitor.ip}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {formatRegionLabel(
-                          [visitor.country, visitor.region, visitor.city]
-                            .filter(Boolean)
-                            .join(' · ') || '未知地区'
-                        )}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {formatVisitTime(visitor.at)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  )
+                })()}
+              </>
             )}
           </motion.div>
         </div>

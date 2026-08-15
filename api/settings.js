@@ -62,8 +62,24 @@ function decodeHeader(value) {
   }
 }
 
-/** 从请求头取真实 IP（Vercel / 反代） */
+/** 从请求头取真实 IP（优先 Cloudflare，再 Vercel，再反代） */
 function getClientIp(req) {
+  // 优先用 Cloudflare 的真实访客 IP（用户用了 Cloudflare CDN）
+  const cfIp = req.headers['cf-connecting-ip']
+  if (typeof cfIp === 'string' && cfIp.trim()) {
+    return cfIp.trim()
+  }
+  if (Array.isArray(cfIp) && cfIp[0]) {
+    return String(cfIp[0]).trim()
+  }
+
+  // 其次用 Vercel 的真实 IP
+  const vercelIp = req.headers['x-vercel-forwarded-for']
+  if (typeof vercelIp === 'string' && vercelIp.trim()) {
+    return vercelIp.split(',')[0].trim()
+  }
+
+  // 最后用 x-forwarded-for（取最左边的客户端 IP）
   const forwarded = req.headers['x-forwarded-for']
   if (typeof forwarded === 'string' && forwarded.trim()) {
     return forwarded.split(',')[0].trim()
@@ -71,9 +87,9 @@ function getClientIp(req) {
   if (Array.isArray(forwarded) && forwarded[0]) {
     return String(forwarded[0]).split(',')[0].trim()
   }
+
   return (
     req.headers['x-real-ip'] ||
-    req.headers['cf-connecting-ip'] ||
     req.socket?.remoteAddress ||
     ''
   )
