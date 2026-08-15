@@ -136,7 +136,7 @@ const AdminDashboard = () => {
         photosApi.getAll().catch(() => ({ photos: [] })),
         musicApi.getAll().catch(() => ({ tracks: [] })),
         contactApi.getAll().catch(() => ({ messages: [] })),
-        settingsApi.getVisitors().catch(() => ({ visitors: [], distribution: [], uniqueIps: 0 })),
+        settingsApi.getVisitors().catch(() => ({ days: {}, visitors: [], distribution: [], uniqueIps: 0 })),
       ])
 
       if (visitorsRes) {
