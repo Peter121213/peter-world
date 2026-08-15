@@ -160,7 +160,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchSettings()
     // 记录访问量 + IP + 地域
-    settingsApi.trackVisit().catch(() => {})
+    settingsApi.recordVisit().catch(() => {})
   }, [])
 
   return (
