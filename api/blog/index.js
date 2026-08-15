@@ -31,8 +31,6 @@ export default apiHandler(async (req, res) => {
 
     // PUT - 更新随笔
     if (req.method === 'PUT') {
-      requireAuth(req)
-
       // 解析表单数据（支持上传封面图）
       const { formidable } = await import('formidable')
       const form = formidable({
@@ -40,6 +38,9 @@ export default apiHandler(async (req, res) => {
       })
 
       const [fields, files] = await form.parse(req)
+
+      // 认证（放在解析之后，这样能从 formData 里取 token）
+      requireAuth(req, fields.token?.[0])
 
       const title = fields.title?.[0]
       const content = fields.content?.[0] || ''
@@ -144,8 +145,6 @@ export default apiHandler(async (req, res) => {
 
   // POST - 新增随笔
   if (req.method === 'POST') {
-    requireAuth(req)
-
     // 解析表单数据（支持上传封面图）
     const { formidable } = await import('formidable')
     const form = formidable({
@@ -153,6 +152,9 @@ export default apiHandler(async (req, res) => {
     })
 
     const [fields, files] = await form.parse(req)
+
+    // 认证（放在解析之后，这样能从 formData 里取 token）
+    requireAuth(req, fields.token?.[0])
 
     const title = fields.title?.[0]
     const content = fields.content?.[0] || ''
