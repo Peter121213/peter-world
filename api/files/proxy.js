@@ -19,6 +19,32 @@ function parseRange(rangeHeader, size) {
   return { start, end }
 }
 
+/** 根据文件扩展名返回正确的 Content-Type（不依赖 R2 里存的元数据） */
+function getContentTypeByExtension(key) {
+  const ext = key.split('.').pop()?.toLowerCase() || ''
+  const map = {
+    // 音频
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    m4a: 'audio/mp4',
+    flac: 'audio/flac',
+    aac: 'audio/aac',
+    webm: 'audio/webm',
+    // 图片
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    bmp: 'image/bmp',
+    // 视频
+    mp4: 'video/mp4',
+  }
+  return map[ext] || 'application/octet-stream'
+}
+
 export default apiHandler(async (req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return error(res, '方法不允许', 405)
@@ -47,7 +73,8 @@ export default apiHandler(async (req, res) => {
       ? parseInt(totalMatch[1], 10)
       : Number(head.ContentLength || 0)
 
-    const contentType = head.ContentType || 'application/octet-stream'
+    // 根据文件扩展名强制设置正确的 Content-Type（修复某些文件上传时 mimetype 识别错误的问题）
+    const contentType = getContentTypeByExtension(key)
     res.setHeader('Content-Type', contentType)
     res.setHeader('Accept-Ranges', 'bytes')
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')

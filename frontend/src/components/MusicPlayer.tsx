@@ -207,12 +207,27 @@ const MusicPlayer = () => {
       setIsPlaying(false)
     }
     const handleError = () => {
-      console.error('音频加载错误', audio.error)
+      const err = audio.error
+      console.error('音频加载错误:', {
+        code: err?.code,
+        message: err?.message,
+        src: audio.src,
+        currentSrc: audio.currentSrc,
+      })
       setIsPlaying(false)
       // 自动重试一次
       if (retryCountRef.current < 2) {
         retryCountRef.current++
+        console.warn(`第 ${retryCountRef.current} 次重试播放...`)
         setTimeout(() => playAudio(), 800)
+      } else {
+        console.error('播放失败次数过多，跳过当前歌曲')
+        // 重试2次都失败，自动切到下一首
+        setTimeout(() => {
+          if (tracks.length > 1) {
+            setCurrentIndex((prev) => (prev === tracks.length - 1 ? 0 : prev + 1))
+          }
+        }, 1000)
       }
     }
 
