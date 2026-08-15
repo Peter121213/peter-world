@@ -177,6 +177,15 @@ export const settingsApi = {
     request('/settings?action=visit', {
       method: 'POST',
     }),
+  getVisitors: () =>
+    request<{
+      days: Record<string, Array<{ ip: string; country?: string; region?: string; city?: string; at?: string }>>
+      visitors: Array<{ ip: string; country?: string; region?: string; city?: string; at?: string; date?: string }>
+      distribution: Array<{ label: string; count: number }>
+      uniqueIps: number
+    }>('/settings?action=visitors', {
+      headers: authHeaders(),
+    }),
 }
 
 // 认证相关 API

@@ -2,6 +2,8 @@ import { supabase } from './_lib/supabase'
 import { requireAuth } from './_lib/auth'
 import { apiHandler, success, error } from './_lib/response'
 
+const MAX_VISITORS_PER_DAY = 300
+
 /** 按 Asia/Shanghai 取当天日期 YYYY-MM-DD */
 function getTodayKey() {
   return new Intl.DateTimeFormat('en-CA', {
@@ -12,7 +14,6 @@ function getTodayKey() {
   }).format(new Date())
 }
 
-/** 在日历日期上加减天数（与服务器本地时区无关） */
 function shiftDateKey(dateKey, deltaDays) {
   const [y, m, d] = dateKey.split('-').map(Number)
   const dt = new Date(Date.UTC(y, m - 1, d + deltaDays))
@@ -22,7 +23,6 @@ function shiftDateKey(dateKey, deltaDays) {
   return `${yy}-${mm}-${dd}`
 }
 
-/** 解析并裁剪近 7 天的每日访问量 */
 function pruneDailyVisits(daily, todayKey) {
   const kept = {}
   for (let i = 0; i < 7; i++) {
@@ -32,7 +32,88 @@ function pruneDailyVisits(daily, todayKey) {
   return kept
 }
 
-// 默认设置
+function parseJsonObject(raw, fallback = {}) {
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return fallback
+    return parsed
+  } catch {
+    return fallback
+  }
+}
+
+/** 只保留近 7 天访客明细 */
+function pruneVisitors(visitors, todayKey) {
+  const kept = {}
+  for (let i = 0; i < 7; i++) {
+    const key = shiftDateKey(todayKey, -i)
+    const list = Array.isArray(visitors?.[key]) ? visitors[key] : []
+    kept[key] = list.slice(0, MAX_VISITORS_PER_DAY)
+  }
+  return kept
+}
+
+function decodeHeader(value) {
+  if (!value || typeof value !== 'string') return ''
+  try {
+    return decodeURIComponent(value.replace(/\+/g, ' '))
+  } catch {
+    return value
+  }
+}
+
+/** 从请求头取真实 IP（Vercel / 反代） */
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for']
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim()
+  }
+  if (Array.isArray(forwarded) && forwarded[0]) {
+    return String(forwarded[0]).split(',')[0].trim()
+  }
+  return (
+    req.headers['x-real-ip'] ||
+    req.headers['cf-connecting-ip'] ||
+    req.socket?.remoteAddress ||
+    ''
+  )
+}
+
+/** Vercel 地理头：国家 / 地区 / 城市 */
+function getGeoFromRequest(req) {
+  return {
+    country: String(req.headers['x-vercel-ip-country'] || req.headers['cf-ipcountry'] || '').toUpperCase(),
+    region: decodeHeader(req.headers['x-vercel-ip-country-region'] || ''),
+    city: decodeHeader(req.headers['x-vercel-ip-city'] || ''),
+  }
+}
+
+function summarizeVisitors(visitorsByDay) {
+  const flat = []
+  const regionCount = {}
+
+  for (const [date, list] of Object.entries(visitorsByDay || {})) {
+    for (const item of list || []) {
+      flat.push({ ...item, date })
+      const label =
+        [item.country, item.region, item.city].filter(Boolean).join(' · ') || '未知地区'
+      regionCount[label] = (regionCount[label] || 0) + 1
+    }
+  }
+
+  flat.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
+
+  const distribution = Object.entries(regionCount)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+
+  return {
+    visitors: flat.slice(0, 200),
+    distribution,
+    uniqueIps: new Set(flat.map((v) => v.ip).filter(Boolean)).size,
+  }
+}
+
 const defaultSettings = {
   site_name: "Peter 的小世界",
   site_description: "用镜头记录美好，用音乐传递情感",
@@ -53,8 +134,34 @@ const defaultSettings = {
 }
 
 export default apiHandler(async (req, res) => {
-  // GET - 获取设置
+  // GET - 设置；或管理员拉取访客明细
   if (req.method === 'GET') {
+    const { action } = req.query
+
+    // 访客 IP / 地区分布（仅管理员）
+    if (action === 'visitors') {
+      requireAuth(req)
+
+      const { data: row, error: dbError } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'visit_visitors')
+        .maybeSingle()
+
+      if (dbError) {
+        return error(res, '获取访客记录失败')
+      }
+
+      const todayKey = getTodayKey()
+      const visitors = pruneVisitors(parseJsonObject(row?.value, {}), todayKey)
+      const summary = summarizeVisitors(visitors)
+
+      return success(res, {
+        days: visitors,
+        ...summary,
+      })
+    }
+
     const { data: settingsRows, error: dbError } = await supabase
       .from('site_settings')
       .select('*')
@@ -63,23 +170,14 @@ export default apiHandler(async (req, res) => {
       return error(res, '获取设置失败')
     }
 
-    // 转换为对象
     const settings = { ...defaultSettings }
-    settingsRows.forEach(row => {
+    settingsRows.forEach((row) => {
+      // 不把访客 IP 明细暴露给公开接口
+      if (row.key === 'visit_visitors') return
       settings[row.key] = row.value
     })
 
-    // 规范化近 7 天访问量（补齐缺失日期、去掉过期）
-    let dailyRaw = {}
-    try {
-      dailyRaw = settings.visit_daily ? JSON.parse(settings.visit_daily) : {}
-      if (!dailyRaw || typeof dailyRaw !== 'object' || Array.isArray(dailyRaw)) {
-        dailyRaw = {}
-      }
-    } catch {
-      dailyRaw = {}
-    }
-    const daily = pruneDailyVisits(dailyRaw, getTodayKey())
+    const daily = pruneDailyVisits(parseJsonObject(settings.visit_daily, {}), getTodayKey())
     settings.visit_daily = daily
     settings.visit_count = settings.visit_count || '0'
 
@@ -96,8 +194,7 @@ export default apiHandler(async (req, res) => {
       return error(res, '无效的设置数据', 400)
     }
 
-    // 逐条更新或插入（禁止通过设置接口改写访问量统计）
-    const protectedKeys = new Set(['visit_count', 'visit_daily'])
+    const protectedKeys = new Set(['visit_count', 'visit_daily', 'visit_visitors'])
     const updates = Object.entries(settings)
       .filter(([key]) => !protectedKeys.has(key))
       .map(([key, value]) =>
@@ -111,17 +208,19 @@ export default apiHandler(async (req, res) => {
     return success(res, { message: '设置已更新' })
   }
 
-  // POST - 统计访问量（总访问量 + 近 7 天每日）
+  // POST - 统计访问量 + 记录 IP/地区
   if (req.method === 'POST') {
     const { action } = req.query
 
     if (action === 'visit') {
       const todayKey = getTodayKey()
+      const ip = getClientIp(req)
+      const geo = getGeoFromRequest(req)
 
       const { data: rows, error: fetchError } = await supabase
         .from('site_settings')
         .select('key, value')
-        .in('key', ['visit_count', 'visit_daily'])
+        .in('key', ['visit_count', 'visit_daily', 'visit_visitors'])
 
       if (fetchError) {
         return error(res, '统计访问量失败')
@@ -130,18 +229,29 @@ export default apiHandler(async (req, res) => {
       const map = Object.fromEntries((rows || []).map((r) => [r.key, r.value]))
       const total = (parseInt(map.visit_count || '0', 10) || 0) + 1
 
-      let dailyRaw = {}
-      try {
-        dailyRaw = map.visit_daily ? JSON.parse(map.visit_daily) : {}
-        if (!dailyRaw || typeof dailyRaw !== 'object' || Array.isArray(dailyRaw)) {
-          dailyRaw = {}
-        }
-      } catch {
-        dailyRaw = {}
+      const daily = pruneDailyVisits(parseJsonObject(map.visit_daily, {}), todayKey)
+      daily[todayKey] = (daily[todayKey] || 0) + 1
+
+      const visitors = pruneVisitors(parseJsonObject(map.visit_visitors, {}), todayKey)
+      const todayList = Array.isArray(visitors[todayKey]) ? [...visitors[todayKey]] : []
+
+      // 同一天同一 IP 只记一次（更新地区与时间）
+      const existingIdx = ip ? todayList.findIndex((v) => v.ip === ip) : -1
+      const entry = {
+        ip: ip || 'unknown',
+        country: geo.country || '',
+        region: geo.region || '',
+        city: geo.city || '',
+        at: new Date().toISOString(),
       }
 
-      const daily = pruneDailyVisits(dailyRaw, todayKey)
-      daily[todayKey] = (daily[todayKey] || 0) + 1
+      if (existingIdx >= 0) {
+        todayList[existingIdx] = entry
+      } else if (todayList.length < MAX_VISITORS_PER_DAY) {
+        todayList.unshift(entry)
+      }
+
+      visitors[todayKey] = todayList
 
       await Promise.all([
         supabase
@@ -150,6 +260,9 @@ export default apiHandler(async (req, res) => {
         supabase
           .from('site_settings')
           .upsert({ key: 'visit_daily', value: JSON.stringify(daily) }, { onConflict: 'key' }),
+        supabase
+          .from('site_settings')
+          .upsert({ key: 'visit_visitors', value: JSON.stringify(visitors) }, { onConflict: 'key' }),
       ])
 
       return success(res, { count: total, daily })

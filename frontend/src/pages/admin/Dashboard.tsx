@@ -8,9 +8,54 @@ import {
   ArrowUpRight,
   Clock,
   Loader2,
+  MapPin,
+  Globe,
+  Users,
 } from 'lucide-react'
-import { photosApi, musicApi, contactApi } from '@/lib/api'
+import { photosApi, musicApi, contactApi, settingsApi } from '@/lib/api'
 import { useSettings } from '@/contexts/SettingsContext'
+
+/** 常见国家码中文名 */
+const COUNTRY_NAMES: Record<string, string> = {
+  CN: '中国',
+  HK: '中国香港',
+  TW: '中国台湾',
+  MO: '中国澳门',
+  US: '美国',
+  JP: '日本',
+  KR: '韩国',
+  SG: '新加坡',
+  GB: '英国',
+  DE: '德国',
+  FR: '法国',
+  AU: '澳大利亚',
+  CA: '加拿大',
+  RU: '俄罗斯',
+  IN: '印度',
+  TH: '泰国',
+  VN: '越南',
+  MY: '马来西亚',
+  PH: '菲律宾',
+  ID: '印度尼西亚',
+}
+
+function formatRegionLabel(raw: string) {
+  if (!raw || raw === '未知地区') return '未知地区'
+  const parts = raw.split(' · ').filter(Boolean)
+  if (parts[0] && COUNTRY_NAMES[parts[0]]) {
+    parts[0] = COUNTRY_NAMES[parts[0]]
+  }
+  return parts.join(' · ')
+}
+
+function formatVisitTime(iso?: string) {
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleString('zh-CN', { hour12: false })
+  } catch {
+    return iso
+  }
+}
 
 /** 生成近 7 天日期列表（从旧到新），时区 Asia/Shanghai */
 function getLast7Days(): string[] {
@@ -47,6 +92,13 @@ const AdminDashboard = () => {
   })
   const [loading, setLoading] = useState(true)
 
+  const [visitors, setVisitors] = useState<{
+    visitors: Array<{ ip: string; country?: string; region?: string; city?: string; at?: string; date?: string }>
+    distribution: Array<{ label: string; count: number }>
+    uniqueIps: number
+  }>({ visitors: [], distribution: [], uniqueIps: 0 })
+  const [visitorsLoading, setVisitorsLoading] = useState(true)
+
   const [recentActivity, setRecentActivity] = useState<
     Array<{
       id: number
@@ -78,11 +130,17 @@ const AdminDashboard = () => {
       setLoading(true)
       
       // 并行获取各项数据
-      const [photosRes, musicRes, messagesRes] = await Promise.all([
+      const [photosRes, musicRes, messagesRes, visitorsRes] = await Promise.all([
         photosApi.getAll().catch(() => ({ photos: [] })),
         musicApi.getAll().catch(() => ({ tracks: [] })),
         contactApi.getAll().catch(() => ({ messages: [] })),
+        settingsApi.getVisitors().catch(() => ({ visitors: [], distribution: [], uniqueIps: 0 })),
       ])
+
+      if (visitorsRes) {
+        setVisitors(visitorsRes)
+      }
+      setVisitorsLoading(false)
 
       setStats({
         photos: photosRes.photos?.length || 0,
@@ -178,6 +236,12 @@ const AdminDashboard = () => {
       value: parseInt(settings?.visitCount || '0', 10),
       icon: TrendingUp,
       color: 'from-orange-500 to-orange-600',
+    },
+    {
+      label: '独立访客(7日)',
+      value: visitors.uniqueIps,
+      icon: Users,
+      color: 'from-cyan-500 to-cyan-600',
     },
   ]
 
@@ -285,6 +349,111 @@ const AdminDashboard = () => {
             })}
           </div>
         </motion.div>
+      )}
+
+      {/* 访客地域分布 + 最近访客 */}
+      {!loading && (
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* 地域分布 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="bg-card/50 rounded-xl border border-white/10 p-6"
+          >
+            <div className="flex items-center gap-2 mb-6">
+              <Globe className="w-5 h-5 text-accent" />
+              <h2 className="text-lg font-semibold">访客地域分布</h2>
+              <span className="text-xs text-muted-foreground ml-auto">近 7 日</span>
+            </div>
+            {visitorsLoading ? (
+              <div className="text-center py-10">
+                <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto" />
+              </div>
+            ) : visitors.distribution.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                暂无访客数据
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {visitors.distribution.slice(0, 10).map((item, index) => {
+                  const maxCount = visitors.distribution[0]?.count || 1
+                  const widthPct = (item.count / maxCount) * 100
+                  return (
+                    <div key={item.label} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                          {formatRegionLabel(item.label)}
+                        </span>
+                        <span className="font-medium tabular-nums">{item.count}</span>
+                      </div>
+                      <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${widthPct}%` }}
+                          transition={{ duration: 0.5, delay: 0.5 + index * 0.05 }}
+                          className="h-full bg-gradient-to-r from-accent to-orange-400 rounded-full"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </motion.div>
+
+          {/* 最近访客 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+            className="bg-card/50 rounded-xl border border-white/10 p-6"
+          >
+            <div className="flex items-center gap-2 mb-6">
+              <Users className="w-5 h-5 text-accent" />
+              <h2 className="text-lg font-semibold">最近访客</h2>
+              <span className="text-xs text-muted-foreground ml-auto">
+                共 {visitors.visitors.length} 条记录
+              </span>
+            </div>
+            {visitorsLoading ? (
+              <div className="text-center py-10">
+                <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto" />
+              </div>
+            ) : visitors.visitors.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                暂无访客记录
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[320px] overflow-y-auto pr-2">
+                {visitors.visitors.slice(0, 30).map((visitor, index) => (
+                  <div
+                    key={`${visitor.ip}-${visitor.at}-${index}`}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Globe className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-mono truncate">{visitor.ip}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {formatRegionLabel(
+                          [visitor.country, visitor.region, visitor.city]
+                            .filter(Boolean)
+                            .join(' · ') || '未知地区'
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                      {formatVisitTime(visitor.at)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </div>
       )}
 
       {!loading && (
