@@ -23,9 +23,9 @@ const MusicPlayer = () => {
   const [volume, setVolume] = useState(0.7)
   const [isMuted, setIsMuted] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [hasAutoPlayed, setHasAutoPlayed] = useState(false)
+  const [hasInteracted, setHasInteracted] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
-  const playIntentRef = useRef(false)
+  const retryCountRef = useRef(0)
 
   useEffect(() => {
     fetchTracks()
@@ -59,8 +59,8 @@ const MusicPlayer = () => {
 
   const currentTrack = tracks[currentIndex]
 
-  // 切歌时正确加载音源，再按意图播放
-  useEffect(() => {
+  // 统一的播放函数：加载音源并播放
+  const playAudio = () => {
     const audio = audioRef.current
     if (!audio || !currentTrack?.audioUrl) return
 
@@ -75,78 +75,81 @@ const MusicPlayer = () => {
       setDuration(0)
     }
 
-    if (playIntentRef.current || isPlaying) {
-      const tryPlay = () => {
-        audio
-          .play()
-          .then(() => {
-            setIsPlaying(true)
-            playIntentRef.current = true
-          })
-          .catch((err) => {
-            console.warn('播放失败:', err)
-            setIsPlaying(false)
-            playIntentRef.current = false
-          })
-      }
-
-      if (needReload) {
-        const onCanPlay = () => {
-          audio.removeEventListener('canplay', onCanPlay)
-          tryPlay()
+    const doPlay = () => {
+      audio.play().then(() => {
+        setIsPlaying(true)
+        retryCountRef.current = 0
+      }).catch((err) => {
+        console.warn('播放失败:', err)
+        setIsPlaying(false)
+        // 失败后重试一次（可能是音源还没加载好）
+        if (retryCountRef.current < 2) {
+          retryCountRef.current++
+          setTimeout(doPlay, 500)
         }
-        audio.addEventListener('canplay', onCanPlay)
-        // 兜底：部分浏览器已缓存时可直接播
-        setTimeout(tryPlay, 150)
-        return () => audio.removeEventListener('canplay', onCanPlay)
+      })
+    }
+
+    if (needReload) {
+      const onCanPlay = () => {
+        audio.removeEventListener('canplay', onCanPlay)
+        doPlay()
       }
-
-      tryPlay()
+      audio.addEventListener('canplay', onCanPlay)
+      // 兜底：1秒后强制尝试播放
+      setTimeout(() => {
+        audio.removeEventListener('canplay', onCanPlay)
+        doPlay()
+      }, 1000)
+    } else {
+      doPlay()
     }
-  }, [currentIndex, currentTrack?.audioUrl])
+  }
 
-  // 自动播放（可能被浏览器拦截）
+  // 切歌时自动播放
   useEffect(() => {
-    if (loading || tracks.length === 0 || hasAutoPlayed) return
-    if (!audioRef.current || !currentTrack?.audioUrl) return
+    if (tracks.length === 0 || !currentTrack?.audioUrl) return
+    // 只有用户已经交互过，或者已经在播放中，才自动播放
+    if (hasInteracted || isPlaying) {
+      playAudio()
+    } else {
+      // 还没交互过，先加载音源但不播放
+      const audio = audioRef.current
+      if (audio && currentTrack.audioUrl) {
+        const absolute = new URL(currentTrack.audioUrl, window.location.origin).href
+        if (audio.src !== absolute) {
+          audio.src = currentTrack.audioUrl
+          audio.load()
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, currentTrack?.audioUrl, tracks.length])
 
-    playIntentRef.current = true
-    const audio = audioRef.current
-    if (!audio.src) {
-      audio.src = currentTrack.audioUrl
-      audio.load()
+  // 用户首次交互后自动播放
+  useEffect(() => {
+    if (hasInteracted || tracks.length === 0) return
+
+    const handleFirstInteraction = () => {
+      setHasInteracted(true)
+      // 延迟一点播放，确保音频已加载
+      setTimeout(() => playAudio(), 100)
+      document.removeEventListener('click', handleFirstInteraction)
+      document.removeEventListener('keydown', handleFirstInteraction)
+      document.removeEventListener('touchstart', handleFirstInteraction)
     }
 
-    const playPromise = audio.play()
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          setIsPlaying(true)
-          setHasAutoPlayed(true)
-        })
-        .catch(() => {
-          const handleFirstInteraction = () => {
-            if (!audioRef.current) return
-            playIntentRef.current = true
-            audioRef.current
-              .play()
-              .then(() => setIsPlaying(true))
-              .catch(() => {
-                setIsPlaying(false)
-                playIntentRef.current = false
-              })
-            setHasAutoPlayed(true)
-            document.removeEventListener('click', handleFirstInteraction)
-            document.removeEventListener('keydown', handleFirstInteraction)
-            document.removeEventListener('touchstart', handleFirstInteraction)
-          }
+    document.addEventListener('click', handleFirstInteraction)
+    document.addEventListener('keydown', handleFirstInteraction)
+    document.addEventListener('touchstart', handleFirstInteraction)
 
-          document.addEventListener('click', handleFirstInteraction)
-          document.addEventListener('keydown', handleFirstInteraction)
-          document.addEventListener('touchstart', handleFirstInteraction)
-        })
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction)
+      document.removeEventListener('keydown', handleFirstInteraction)
+      document.removeEventListener('touchstart', handleFirstInteraction)
     }
-  }, [loading, tracks, hasAutoPlayed, currentTrack?.audioUrl])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tracks.length, hasInteracted])
 
   useEffect(() => {
     const handleToggleMusic = () => {
@@ -157,10 +160,9 @@ const MusicPlayer = () => {
       if (!detail?.id || tracks.length === 0) return
       const index = tracks.findIndex((t) => String(t.id) === String(detail.id))
       if (index < 0) return
-      playIntentRef.current = true
+      setHasInteracted(true)
       setCurrentIndex(index)
       setIsOpen(true)
-      setIsPlaying(true)
     }
     window.addEventListener('toggleMusic', handleToggleMusic)
     window.addEventListener('playTrack', handlePlayTrack)
@@ -195,25 +197,23 @@ const MusicPlayer = () => {
       if (!Number.isNaN(audio.duration)) setDuration(audio.duration)
     }
     const handleEnded = () => {
-      setCurrentIndex((prev) => {
-        const next = prev === tracks.length - 1 ? 0 : prev + 1
-        playIntentRef.current = true
-        return next
-      })
-      setIsPlaying(true)
+      // 自动下一首（切歌effect会自动播放，因为hasInteracted已经是true）
+      setCurrentIndex((prev) => (prev === tracks.length - 1 ? 0 : prev + 1))
     }
     const handlePlay = () => {
       setIsPlaying(true)
-      playIntentRef.current = true
     }
     const handlePause = () => {
-      // 仅在用户/逻辑真正暂停时同步；切歌过程中的短暂 pause 忽略
-      if (!playIntentRef.current) setIsPlaying(false)
+      setIsPlaying(false)
     }
     const handleError = () => {
       console.error('音频加载错误', audio.error)
       setIsPlaying(false)
-      playIntentRef.current = false
+      // 自动重试一次
+      if (retryCountRef.current < 2) {
+        retryCountRef.current++
+        setTimeout(() => playAudio(), 800)
+      }
     }
 
     audio.addEventListener('timeupdate', handleTimeUpdate)
@@ -237,27 +237,25 @@ const MusicPlayer = () => {
     const handleSeek = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (!audioRef.current || detail?.time == null) return
-      playIntentRef.current = true
+      setHasInteracted(true)
 
       if (detail.id != null) {
         const index = tracks.findIndex((t) => String(t.id) === String(detail.id))
         if (index >= 0 && index !== currentIndex) {
           setCurrentIndex(index)
-          setIsPlaying(true)
           setIsOpen(true)
           // 等切歌 effect 加载后再 seek
           setTimeout(() => {
             if (!audioRef.current) return
             audioRef.current.currentTime = detail.time
-            audioRef.current.play().catch(() => {})
-          }, 250)
+            playAudio()
+          }, 300)
           return
         }
       }
 
       audioRef.current.currentTime = detail.time
-      audioRef.current.play().catch(() => {})
-      setIsPlaying(true)
+      playAudio()
       setIsOpen(true)
     }
     window.addEventListener('seekMusic', handleSeek)
@@ -271,30 +269,23 @@ const MusicPlayer = () => {
   }, [volume, isMuted])
 
   const togglePlay = () => {
+    setHasInteracted(true)
     const audio = audioRef.current
     if (!audio) return
     if (!audio.paused) {
-      playIntentRef.current = false
       audio.pause()
-      setIsPlaying(false)
     } else {
-      playIntentRef.current = true
-      audio
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch(() => setIsPlaying(false))
+      playAudio()
     }
   }
 
   const handlePrevious = () => {
-    playIntentRef.current = true
-    setIsPlaying(true)
+    setHasInteracted(true)
     setCurrentIndex((prev) => (prev === 0 ? tracks.length - 1 : prev - 1))
   }
 
   const handleNext = () => {
-    playIntentRef.current = true
-    setIsPlaying(true)
+    setHasInteracted(true)
     setCurrentIndex((prev) => (prev === tracks.length - 1 ? 0 : prev + 1))
   }
 
