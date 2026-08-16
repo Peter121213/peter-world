@@ -19,11 +19,9 @@ function parseRange(rangeHeader, size) {
   return { start, end }
 }
 
-/** 根据文件扩展名返回正确的 Content-Type */
 function getContentTypeByExtension(key) {
   const ext = key.split('.').pop()?.toLowerCase() || ''
   const map = {
-    // 音频
     mp3: 'audio/mpeg',
     wav: 'audio/wav',
     ogg: 'audio/ogg',
@@ -31,7 +29,6 @@ function getContentTypeByExtension(key) {
     flac: 'audio/flac',
     aac: 'audio/aac',
     webm: 'audio/webm',
-    // 图片
     jpg: 'image/jpeg',
     jpeg: 'image/jpeg',
     png: 'image/png',
@@ -39,7 +36,6 @@ function getContentTypeByExtension(key) {
     webp: 'image/webp',
     svg: 'image/svg+xml',
     bmp: 'image/bmp',
-    // 视频
     mp4: 'video/mp4',
   }
   return map[ext] || 'application/octet-stream'
@@ -58,9 +54,8 @@ export default apiHandler(async (req, res) => {
   }
 
   try {
-    // 第一步：用 HeadObject 获取文件大小和元数据（比 Range: bytes=0-0 更可靠）
+    // 获取文件大小（优先 HeadObject，失败降级到 Range 探测）
     let totalSize = 0
-    let contentTypeFromR2 = ''
     try {
       const head = await r2Client.send(
         new HeadObjectCommand({
@@ -69,29 +64,20 @@ export default apiHandler(async (req, res) => {
         })
       )
       totalSize = Number(head.ContentLength) || 0
-      contentTypeFromR2 = head.ContentType || ''
     } catch (headErr) {
-      // HeadObject 失败（比如 R2 权限问题），降级用 GetObject + Range 获取大小
-      console.warn('HeadObject failed, fallback to GetObject:', headErr.message)
-      try {
-        const probe = await r2Client.send(
-          new GetObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: key,
-            Range: 'bytes=0-0',
-          })
-        )
-        const contentRange = String(probe.ContentRange || '')
-        const match = contentRange.match(/\/(\d+)$/)
-        totalSize = match ? parseInt(match[1], 10) : Number(probe.ContentLength) || 0
-        contentTypeFromR2 = probe.ContentType || ''
-      } catch (probeErr) {
-        console.error('Failed to get file size:', probeErr)
-        return error(res, '获取文件信息失败', 500)
-      }
+      console.warn('HeadObject failed, fallback:', headErr.message)
+      const probe = await r2Client.send(
+        new GetObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: key,
+          Range: 'bytes=0-0',
+        })
+      )
+      const contentRange = String(probe.ContentRange || '')
+      const match = contentRange.match(/\/(\d+)$/)
+      totalSize = match ? parseInt(match[1], 10) : Number(probe.ContentLength) || 0
     }
 
-    // 根据扩展名强制设置 Content-Type（优先用扩展名，避免上传时 mimetype 错误）
     const contentType = getContentTypeByExtension(key)
     res.setHeader('Content-Type', contentType)
     res.setHeader('Accept-Ranges', 'bytes')
@@ -105,7 +91,7 @@ export default apiHandler(async (req, res) => {
 
     const range = parseRange(req.headers.range, totalSize)
 
-    // 第二步：处理 Range 请求（音频/视频播放器依赖这个）
+    // Range 请求（音频/视频分段加载）
     if (range && totalSize > 0) {
       const { start, end } = range
       const chunkSize = end - start + 1
@@ -122,25 +108,14 @@ export default apiHandler(async (req, res) => {
       res.setHeader('Content-Range', `bytes ${start}-${end}/${totalSize}`)
       res.setHeader('Content-Length', String(chunkSize))
 
-      // 流式输出，避免大文件占用过多内存
-      const body = obj.Body
-      if (body && typeof body.pipe === 'function') {
-        await new Promise((resolve, reject) => {
-          body.on('error', reject)
-          body.on('end', resolve)
-          body.pipe(res)
-        })
-      } else {
-        const chunks = []
-        for await (const chunk of body) {
-          chunks.push(chunk)
-        }
-        res.end(Buffer.concat(chunks))
+      const chunks = []
+      for await (const chunk of obj.Body) {
+        chunks.push(chunk)
       }
-      return
+      return res.end(Buffer.concat(chunks))
     }
 
-    // 第三步：完整文件（无 Range 请求）
+    // 完整文件
     const obj = await r2Client.send(
       new GetObjectCommand({
         Bucket: BUCKET_NAME,
@@ -152,21 +127,11 @@ export default apiHandler(async (req, res) => {
       res.setHeader('Content-Length', String(totalSize))
     }
 
-    // 流式输出
-    const body = obj.Body
-    if (body && typeof body.pipe === 'function') {
-      await new Promise((resolve, reject) => {
-        body.on('error', reject)
-        body.on('end', resolve)
-        body.pipe(res)
-      })
-    } else {
-      const chunks = []
-      for await (const chunk of body) {
-        chunks.push(chunk)
-      }
-      res.end(Buffer.concat(chunks))
+    const chunks = []
+    for await (const chunk of obj.Body) {
+      chunks.push(chunk)
     }
+    return res.status(200).end(Buffer.concat(chunks))
   } catch (err) {
     if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
       return error(res, '文件不存在', 404)
