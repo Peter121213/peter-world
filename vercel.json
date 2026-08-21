@@ -1,51 +1,51 @@
-﻿{
-  buildCommand: cd frontend && npm run build,
-  outputDirectory: frontend/dist,
-  installCommand: npm install && cd frontend && npm install,
-  framework: vite,
-  rewrites: [
+{
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "npm install && cd frontend && npm install",
+  "framework": "vite",
+  "rewrites": [
     {
-      source: /api/auth/verify,
-      destination: /api/auth/login
+      "source": "/api/auth/verify",
+      "destination": "/api/auth/login"
     },
     {
-      source: /api/files/:file*,
-      destination: /api/files/proxy
+      "source": "/api/files/:file*",
+      "destination": "/api/files/proxy"
     },
     {
-      source: /api/photos/featured,
-      destination: /api/photos?featured=true
+      "source": "/api/photos/featured",
+      "destination": "/api/photos?featured=true"
     },
     {
-      source: /api/music/:id,
-      destination: /api/music?id=:id
+      "source": "/api/music/:id",
+      "destination": "/api/music?id=:id"
     },
     {
-      source: /api/photos/:id,
-      destination: /api/photos/detail?id=:id
+      "source": "/api/photos/:id",
+      "destination": "/api/photos/detail?id=:id"
     },
     {
-      source: /api/contact/messages/:id,
-      destination: /api/contact/messages
+      "source": "/api/contact/messages/:id",
+      "destination": "/api/contact/messages"
     },
     {
-      source: /api/blog/:id,
-      destination: /api/blog
+      "source": "/api/blog/:id",
+      "destination": "/api/blog"
     },
     {
-      source: /api/:path*,
-      destination: /api/:path*
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     },
     {
-      source: /(.*),
-      destination: /index.html
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
-  functions: {
-    api/**/*.js: {
-      maxDuration: 10,
-      regions: [
-        hnd1
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 10,
+      "regions": [
+        "hnd1"
       ]
     }
   }
